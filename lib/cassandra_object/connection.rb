@@ -3,7 +3,7 @@ module CassandraObject
     extend ActiveSupport::Concern
     
     included do
-      class_attribute :connection
+      class_attribute :connection_spec
     end
 
     module ClassMethods
@@ -13,7 +13,16 @@ module CassandraObject
       }
       def establish_connection(spec)
         spec.reverse_merge!(DEFAULT_OPTIONS)
-        self.connection = Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift].symbolize_keys!)
+        @connection = Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift].symbolize_keys!)
+      end
+
+      def connection=(val)
+        @connection = val
+      end
+
+      def connection
+        establish_connection(connection_spec) if @connection.nil?
+        @connection
       end
     end
   end

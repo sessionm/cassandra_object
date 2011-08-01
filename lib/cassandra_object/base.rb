@@ -22,6 +22,8 @@ module CassandraObject
         end
         klass
       end
+
+      delegate :compute_type, :to => 'ActiveRecord::Base'
     end
 
     extend ActiveModel::Naming
@@ -41,7 +43,6 @@ module CassandraObject
     include FinderMethods
     include Timestamps
 
-    attr_reader :attributes
     attr_accessor :key
 
     include Serialization
@@ -55,6 +56,10 @@ module CassandraObject
       @attributes = {}.with_indifferent_access
       self.attributes = attributes
       @schema_version = self.class.current_schema_version
+    end
+
+    def attributes
+      @attributes.merge(:id => id)
     end
 
     def to_param
@@ -74,6 +79,19 @@ module CassandraObject
 
     def eql?(comparison_object)
       self == (comparison_object)
+    end
+
+    # Returns the value of the attribute identified by <tt>attr_name</tt> after it has been typecast (for example,
+    # "2004-12-12" in a data column is cast to a date object, like Date.new(2004, 12, 12)).
+    # (Alias for the protected read_attribute method).
+    def [](attr_name)
+      read_attribute(attr_name)
+    end
+    
+    # Updates the attribute identified by <tt>attr_name</tt> with the specified +value+.
+    # (Alias for the protected write_attribute method).
+    def []=(attr_name, value)
+      write_attribute(attr_name, value)
     end
   end
 end

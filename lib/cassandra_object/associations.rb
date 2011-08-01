@@ -3,6 +3,10 @@ module CassandraObject
     extend ActiveSupport::Concern
     extend ActiveSupport::Autoload
 
+    # TODO: is this the convention?
+    include ActiveRecord::Reflection
+    include ActiveRecord::Associations
+
     autoload :OneToMany
     autoload :OneToOne
     
