@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = '>= 1.3.5'
 
   s.authors = ["Michael Koziarski", "gotime", "sessionm"]
-  s.email = 'github@sessionm.com'
+  s.email = 'klange@sessionm.com'
   s.homepage = 'http://github.com/sessionm/cassandra_object'
 
   s.extra_rdoc_files = ["README.markdown"]
