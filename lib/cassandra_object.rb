@@ -36,6 +36,7 @@ module CassandraObject
     autoload :ArrayType
     autoload :BooleanType
     autoload :DateType
+    autoload :DecimalType
     autoload :FloatType
     autoload :HashType
     autoload :IntegerType

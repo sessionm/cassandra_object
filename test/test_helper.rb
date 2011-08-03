@@ -7,16 +7,16 @@ require 'rails/test_help'
 
 class Issue < CassandraObject::Base
   key :uuid
-  attribute :description, type: :string
+  attribute :description, :type => :string
 end
 
 module CassandraObject
   class TestCase < ActiveSupport::TestCase
     setup do
       CassandraObject::Base.establish_connection(
-        keyspace: 'place_directory_development',
+        :keyspace => 'place_directory_development',
         # servers: '192.168.0.100:9160'
-        servers: '127.0.0.1:9160'
+        :servers => '127.0.0.1:9160'
       )
     end
 
