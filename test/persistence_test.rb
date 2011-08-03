@@ -22,8 +22,12 @@ class CassandraObject::PersistenceTest < CassandraObject::TestCase
     begin
       Issue.validates(:description, presence: true)
 
-      issue = Issue.new(description: 'bad')
+      issue = Issue.new(description: 'bad', worth: '9000.00311219')
       issue.save!
+
+      issue = Issue.find(issue.id)
+      assert_equal BigDecimal.new('9000.00311219'), issue.worth
+      assert_equal [18, 117], issue.worth.precs
 
       issue = Issue.new
       assert_raise(CassandraObject::RecordInvalid) { issue.save! }

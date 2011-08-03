@@ -55,7 +55,15 @@ module CassandraObject
       end
 
       def decode_columns_hash(attributes)
-        Hash[attributes.map { |k, v| [k.to_s, model_attributes[k].converter.decode(v)] }]
+        Hash[attributes.map do |k, v|
+               attribute = model_attributes[k]
+               decoded = if attribute.converter.method(:decode).arity == 1
+                           attribute.converter.decode(v)
+                         else
+                           attribute.converter.decode(v, attribute.options)
+                         end
+               [k.to_s, decoded]
+             end]
       end
       
       def column_family_configuration

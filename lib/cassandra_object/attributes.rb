@@ -1,15 +1,22 @@
 module CassandraObject
   class Attribute
-    attr_reader :name, :converter, :expected_type
-    def initialize(name, converter, expected_type)
+    attr_reader :name, :converter, :expected_type, :options
+    def initialize(name, converter, expected_type, options)
       @name          = name.to_s
       @converter     = converter
       @expected_type = expected_type
+      @options       = options
     end
 
     def check_value!(value)
       return value if value.nil?
-      value.kind_of?(expected_type) ? value : converter.decode(value)
+      if value.kind_of?(expected_type)
+        value
+      elsif converter.method(:decode).arity == 1
+        converter.decode(value)
+      else
+        converter.decode(value, @options)
+      end
     end
   end
 
@@ -32,8 +39,8 @@ module CassandraObject
         else
           raise "Unknown type #{options[:type]}"
         end
-
-        model_attributes[name] = Attribute.new(name, converter, expected_type)
+        
+        model_attributes[name] = Attribute.new(name, converter, expected_type, options.except(:type, :converter))
       end
 
       def define_attribute_methods

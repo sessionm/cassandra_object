@@ -7,10 +7,14 @@ module CassandraObject
       end
       module_function :encode
 
-      def decode(str)
+      def decode(str, options={})
         return nil if str.empty?
         raise ArgumentError.new("Cannot convert #{str} into a BigDecimal") unless str.kind_of?(String)
-        BigDecimal.new(str)
+        if options[:precision].present?
+          BigDecimal.new(str, options[:precision])
+        else
+          BigDecimal.new(str)
+        end
       end
       module_function :decode
     end
