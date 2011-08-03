@@ -43,6 +43,7 @@ module CassandraObject
     def id
       key.to_s
     end
+    alias :quoted_id :id
 
     def id=(key)
       self.key = self.class.parse_key(key)
