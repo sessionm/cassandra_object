@@ -4,9 +4,9 @@ namespace :ks do
     @config = @configs[Rails.env || 'development']
   end
 
-  #task :set_keyspace => :configure do
-    #set_keyspace
-  #end
+  task :set_keyspace => :configure do
+    set_keyspace
+  end
 
   desc 'Create the keyspace in config/cassandra.yml for the current environment'
   task :create => :configure do
