@@ -30,7 +30,9 @@ module CassandraObject
     include ActiveModel::Conversion
     extend ActiveSupport::DescendantsTracker
     
-    include Connection
+    #TODO: make the connection type configurable
+    include AsyncConnection
+    #include Connection
     include Consistency
     include Identity
     include Attributes
