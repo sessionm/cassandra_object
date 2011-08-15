@@ -48,12 +48,12 @@ module CassandraObject
         results.size <= 1 && !expects_array ? results.first : results
       end
 
-      private
-        def multi_get(keys, options={})
-          attribute_results = ActiveSupport::Notifications.instrument("multi_get.cassandra_object", column_family: column_family, keys: keys) do
-            connection.multi_get(column_family, keys.map(&:to_s), consistency: thrift_read_consistency)
-          end
+      def find_all_by_expression(expression)
+        multi_get_by_expression(expression).values
+      end
 
+      private
+        def instantiate_many(attribute_results)
           attribute_results.inject({}) do |memo, (key, attributes)|
             if attributes.empty?
               memo[key] = nil
@@ -62,6 +62,23 @@ module CassandraObject
             end
             memo
           end
+        end
+
+        def multi_get(keys, options={})
+          attribute_results = ActiveSupport::Notifications.instrument("multi_get.cassandra_object", column_family: column_family, keys: keys) do
+            connection.multi_get(column_family, keys.map(&:to_s), consistency: thrift_read_consistency)
+          end
+
+          instantiate_many(attribute_results)
+        end
+
+        def multi_get_by_expression(expression)
+          attribute_results = ActiveSupport::Notifications.instrument("multi_get_by_expression.cassandra_object", column_family: column_family, expression: expression) do
+            intermediate_results = connection.get_indexed_slices(column_family, expression, consistency: thrift_read_consistency)
+            connection.send(:multi_columns_to_hash!, column_family, intermediate_results)
+          end
+
+          instantiate_many(attribute_results)
         end
 
         def get(key, options={})
