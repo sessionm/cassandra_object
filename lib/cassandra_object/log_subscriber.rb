@@ -1,5 +1,11 @@
 module CassandraObject
   class LogSubscriber < ActiveSupport::LogSubscriber
+    def get(event)
+      name = '%s get (%.1fms)' % [event.payload[:column_family], event.duration]
+
+      debug "  #{name}  #{event.payload[:key]}"
+    end
+
     def multi_get(event)
       name = '%s multi_get (%.1fms)' % [event.payload[:column_family], event.duration]
 

@@ -3,7 +3,7 @@ module CassandraObject
     extend ActiveSupport::Concern
     module ClassMethods
       def find(key)
-        if parse_key(key) && attributes = connection.get(column_family, key)
+        if parse_key(key) && attributes = ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) { connection.get(column_family, key) }
           instantiate(key, attributes)
         else
           raise CassandraObject::RecordNotFound
