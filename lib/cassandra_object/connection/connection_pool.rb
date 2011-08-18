@@ -45,7 +45,6 @@ module CassandraObject
       # #connection can be called any number of times; the connection is
       # held in a hash keyed by the thread id.
       def connection
-        Rails.logger.info "current_connection_id:#{current_connection_id} conn:#{@reserved_connections[current_connection_id]}"
         @reserved_connections[current_connection_id] ||= checkout
       end
 
@@ -137,7 +136,6 @@ module CassandraObject
       # - ConnectionTimeoutError: no connection can be obtained from the pool
       #   within the timeout period.
       def checkout
-        Rails.logger.info "checkout()"
         # Checkout an available connection
         @connection_mutex.synchronize do
           loop do
@@ -146,7 +144,6 @@ module CassandraObject
                    elsif @connections.size < @size
                      checkout_new_connection
                    end
-            Rails.logger.info "checkout returning:#{conn}" if conn
             return conn if conn
 
             @queue.wait(@timeout)
@@ -170,7 +167,6 @@ module CassandraObject
       # +conn+: an AbstractAdapter object, which was obtained by earlier by
       # calling +checkout+ on this pool.
       def checkin(conn)
-        Rails.logger.info "checkin:#{conn}"
         @connection_mutex.synchronize do
 #          conn.send(:_run_checkin_callbacks) do
             @checked_out.delete conn
@@ -184,7 +180,6 @@ module CassandraObject
 
       private
       def new_connection
-        Rails.logger.info "spec:#{spec.inspect}"
         Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift])
         
         #this_spec = spec.dup
