@@ -4,7 +4,7 @@ Cassandra Object provides a API for working with [Cassandra](http://incubator.ap
 
 Installation:
 
-        gem 'gotime-cassandra_object',  require: 'cassandra_object'
+        gem 'sessionm-cassandra_object',  require: 'cassandra_object'
 
 Example:
 
