@@ -1,5 +1,6 @@
 require 'set'
 
+require 'cassandra_object/connection/connection_specification'
 require 'cassandra_object/log_subscriber'
 require 'cassandra_object/types'
 require 'cassandra_object/errors'
@@ -31,8 +32,9 @@ module CassandraObject
     extend ActiveSupport::DescendantsTracker
     
     #TODO: make the connection type configurable
-    include AsyncConnection
+    #include AsyncConnection
     #include Connection
+    #include ConnectionPool
     include Consistency
     include Identity
     include Attributes
