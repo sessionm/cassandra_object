@@ -1,8 +1,5 @@
 module CassandraObject
   class Railtie < Rails::Railtie
-    config.app_middleware.insert_after "::ActionDispatch::Callbacks",
-      "CassandraObject::ConnectionAdapters::ConnectionManagement"
-
     rake_tasks do
       load 'cassandra_object/tasks/ks.rake'
     end

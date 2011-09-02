@@ -4,6 +4,8 @@ module CassandraObject
   extend ActiveSupport::Autoload
 
   autoload :Base
+  autoload :AsyncConnection
+  autoload :Connection
   autoload :Attributes
   autoload :Dirty
   autoload :Consistency
@@ -22,8 +24,6 @@ module CassandraObject
   autoload :Timestamps
   autoload :Type
   autoload :Schema
-
-  autoload :ConnectionAdapters, 'cassandra_object/connection/connection_pool'
 
   module Tasks
     extend ActiveSupport::Autoload
@@ -49,4 +49,3 @@ module CassandraObject
 end
 
 require 'cassandra_object/railtie'
-

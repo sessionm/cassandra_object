@@ -7,7 +7,4 @@ module CassandraObject
   
   class RecordNotFound < CasssandraObjectError
   end
-
-  class ConnectionNotEstablished < CasssandraObjectError
-  end
 end
