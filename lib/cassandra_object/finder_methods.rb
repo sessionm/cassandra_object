@@ -50,8 +50,8 @@ module CassandraObject
         results.size <= 1 && !expects_array ? results.first : results
       end
 
-      def find_all_by_expression(expression)
-        multi_get_by_expression(expression).values
+      def find_all_by_expression(expression, options={})
+        multi_get_by_expression(expression, options).values
       end
 
       private
@@ -74,9 +74,11 @@ module CassandraObject
           instantiate_many(attribute_results)
         end
 
-        def multi_get_by_expression(expression)
+        def multi_get_by_expression(expression, options={})
+          options = options.reverse_merge(:consistency => thrift_read_consistency)
+
           attribute_results = ActiveSupport::Notifications.instrument("multi_get_by_expression.cassandra_object", column_family: column_family, expression: expression) do
-            intermediate_results = connection.get_indexed_slices(column_family, expression, consistency: thrift_read_consistency)
+            intermediate_results = connection.get_indexed_slices(column_family, expression, options)
             connection.send(:multi_columns_to_hash!, column_family, intermediate_results)
           end
 
