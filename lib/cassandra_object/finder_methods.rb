@@ -19,6 +19,18 @@ module CassandraObject
         nil
       end
 
+      def get_counter(key, column)
+        result = ActiveSupport::Notifications.instrument("get_counter.cassandra_object", column_family: column_family, key: key, column: column) do
+          connection.get(column_family, key, column)
+        end
+
+        if result
+          result.to_i
+        else
+          raise CassandraObject::RecordNotFound
+        end
+      end
+
       def all(options = {})
         limit = options[:limit] || 100
         results = ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: limit) do
