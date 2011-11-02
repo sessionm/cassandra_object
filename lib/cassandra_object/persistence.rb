@@ -4,9 +4,7 @@ module CassandraObject
 
     module ClassMethods
       def add(key, value, *columns_and_options)
-        # DataStax recommends using consistency level ONE:
-        #   http://www.datastax.com/docs/0.8/ddl/column_family#about-column-families
-        defaults = Cassandra::WRITE_DEFAULTS.merge(:consistency => Cassandra::Consistency::ONE)
+        defaults = Cassandra::WRITE_DEFAULTS.merge(:consistency => Cassandra::Consistency::QUORUM)
 
         column_family, column, sub_column, options = connection.extract_and_validate_params(self.column_family, key, columns_and_options, defaults)
 
