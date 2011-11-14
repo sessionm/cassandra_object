@@ -25,7 +25,7 @@ module CassandraObject
         end
 
         if result
-          result.to_i
+          result
         else
           raise CassandraObject::RecordNotFound
         end
