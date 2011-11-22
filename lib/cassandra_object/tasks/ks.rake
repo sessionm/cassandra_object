@@ -10,8 +10,14 @@ namespace :ks do
 
   desc 'Create the keyspace in config/cassandra.yml for the current environment'
   task :create => :configure do
-    CassandraObject::Tasks::Keyspace.new.create @config['keyspace'], @config
-    puts "Created keyspace: #{@config['keyspace']}"
+    CassandraObject::Tasks::Keyspace.new.tap do |keyspace|
+      if keyspace.exists? @config['keyspace']
+        $stderr.puts "keyspace #{@config['keyspace']} already exists"
+      else
+        keyspace.create @config['keyspace'], @config
+        puts "Created keyspace: #{@config['keyspace']}"
+      end
+    end
   end
 
   namespace :create do
@@ -28,8 +34,14 @@ namespace :ks do
 
   desc 'Drop keyspace in config/cassandra.yml for the current environment'
   task :drop => :configure do
-    CassandraObject::Tasks::Keyspace.new.drop @config['keyspace']
-    puts "Dropped keyspace: #{@config['keyspace']}"
+    CassandraObject::Tasks::Keyspace.new.tap do |keyspace|
+      if keyspace.exists?(@config['keyspace'])
+        keyspace.drop @config['keyspace']
+        puts "Dropped keyspace: #{@config['keyspace']}"
+      else
+        $stderr.puts "keyspace #{@config['keyspace']} does not exist"
+      end
+    end
   end
 
   namespace :drop do
