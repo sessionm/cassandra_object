@@ -95,5 +95,8 @@ module CassandraObject
     def []=(attr_name, value)
       write_attribute(attr_name, value)
     end
+
+    class_attribute :pluralize_table_names, :instance_writer => false
+    self.pluralize_table_names = true
   end
 end
