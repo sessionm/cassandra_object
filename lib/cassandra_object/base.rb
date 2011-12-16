@@ -34,6 +34,7 @@ module CassandraObject
     include AsyncConnection
     #include Connection
     include Consistency
+    include RowTTL
     include Identity
     include Attributes
     include Persistence

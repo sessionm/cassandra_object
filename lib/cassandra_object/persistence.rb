@@ -35,7 +35,12 @@ module CassandraObject
         key.tap do |key|
           attributes = encode_columns_hash(attributes, schema_version)
           ActiveSupport::Notifications.instrument("insert.cassandra_object", column_family: column_family, key: key, attributes: attributes) do
-            connection.insert(column_family, key.to_s, attributes, consistency: thrift_write_consistency)
+
+            options = {}.tap do |options|
+              options[:consistency] = thrift_write_consistency
+              options[:ttl] = row_ttl unless row_ttl.nil?
+            end
+            connection.insert(column_family, key.to_s, attributes, options)
           end
         end
       end

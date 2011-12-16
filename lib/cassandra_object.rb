@@ -24,6 +24,7 @@ module CassandraObject
   autoload :Timestamps
   autoload :Type
   autoload :Schema
+  autoload :RowTTL
 
   module Tasks
     extend ActiveSupport::Autoload
