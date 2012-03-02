@@ -24,9 +24,10 @@ module CassandraObject
       end
     end
 
-    def valid?
+    def valid?(context=nil)
+      context ||= (new_record? ? :create : :update)
       run_callbacks :validation do
-        super
+        super context
       end
     end
 
