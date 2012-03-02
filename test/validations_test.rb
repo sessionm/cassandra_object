@@ -12,4 +12,15 @@ class CassandraObject::ValidationsTest < CassandraObject::TestCase
       Issue.reset_callbacks(:validate)
     end
   end
+
+  test 'validates :on' do
+    begin
+      Issue.validates(:description, :presence => true, :on => :create)
+      issue = Issue.create!(:description => 'lol')
+      issue.update_attributes! :description => nil
+      assert_raise(CassandraObject::RecordInvalid) { Issue.create!(:description => '') }
+    ensure
+      Issue.reset_callbacks(:validate)
+    end
+  end
 end
