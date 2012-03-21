@@ -50,6 +50,12 @@ module CassandraObject
       
       debug "  #{name}  (#{event.payload[:count]}) '#{event.payload[:start]}' => '#{event.payload[:finish]}'"
     end
+
+    def get_slice(event)
+      name = '%s get_slice (%.1fms)' % [event.payload[:column_family], event.duration]
+      
+      debug "  #{name}  #{event.payload[:key]} '#{event.payload[:start]}' => '#{event.payload[:finish]}'"
+    end
   end
 end
 CassandraObject::LogSubscriber.attach_to :cassandra_object

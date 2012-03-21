@@ -67,7 +67,33 @@ module CassandraObject
         multi_get_by_expression(expression, options).values
       end
 
+      # Selecting a slice of a super column is not supported by default with the cassandra gem
+      # TODO: move this to Cassandra gem.
+      def get_slice(key, start, finish, opts={})
+        parent = CassandraThrift::ColumnParent.new(:column_family => column_family)
+        predicate = CassandraThrift::SlicePredicate.
+          new(:slice_range =>
+              CassandraThrift::SliceRange.new(:start => start,
+                                              :finish => finish,
+                                              :count => opts[:count] || 100,
+                                              :reversed => opts[:reversed] || false))
+        
+        ActiveSupport::Notifications.instrument("get_slice.cassandra_object", column_family: column_family, key: key, start: start, finish: finish) do
+          {}.tap do |result|
+            connection.send(:client).get_slice(key, parent, predicate, opts[:consistency] || Cassandra::Consistency::ONE).each do |column|
+              result[column.counter_super_column.name] = _columns_to_hash(column.counter_super_column.columns)
+            end
+          end
+        end
+      end
+
       private
+        def _columns_to_hash(columns)
+          {}.tap do |hsh|
+            columns.each { |column| hsh[column.name] = column.value }
+          end
+        end
+
         def instantiate_many(attribute_results)
           attribute_results.inject({}) do |memo, (key, attributes)|
             if attributes.empty?
