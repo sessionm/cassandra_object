@@ -19,6 +19,15 @@ module CassandraObject
         end
       end
 
+      # remove_counter is not exposed by Cassandra gem.
+      # TODO: move this to Cassandra gem.
+      def remove_counter(key)
+        ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
+          parent = CassandraThrift::ColumnParent.new(:column_family => column_family)
+          connection.send(:client).remove_counter(key, parent, thrift_write_consistency)
+        end
+      end
+
       def delete_all
         ActiveSupport::Notifications.instrument("truncate.cassandra_object", column_family: column_family) do
           connection.truncate!(column_family)
