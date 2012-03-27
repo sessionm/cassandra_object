@@ -2,7 +2,11 @@ module CassandraObject
   module FinderMethods
     extend ActiveSupport::Concern
     module ClassMethods
-      def find(key)
+      def find(key, opts={})
+        # kludge to play nice ActiveRecord association
+        opts.assert_valid_keys(:conditions)
+        raise(ArgumentError, "unexpected conditions") if opts[:conditions].present?
+
         if key.present? &&
            parse_key(key) &&
            (attributes = ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) { connection.get(column_family, key) }) &&

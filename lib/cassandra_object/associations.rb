@@ -6,6 +6,7 @@ module CassandraObject
     # TODO: is this the convention?
     include ActiveRecord::Reflection
     include ActiveRecord::Associations
+    include ActiveRecord::AutosaveAssociation
 
     autoload :OneToMany
     autoload :OneToOne
