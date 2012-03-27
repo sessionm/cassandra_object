@@ -141,7 +141,7 @@ module CassandraObject
       save!
     end
 
-    def reload
+    def reload(options = nil)
       @attributes.update(self.class.find(self.id).instance_variable_get('@attributes'))
     end
 
