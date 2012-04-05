@@ -144,7 +144,9 @@ module CassandraObject
     end
 
     def reload(options = nil)
+      clear_association_cache
       @attributes.update(self.class.find(self.id).instance_variable_get('@attributes'))
+      self
     end
 
     private
