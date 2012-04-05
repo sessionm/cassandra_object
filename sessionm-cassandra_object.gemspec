@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = 'sessionm-cassandra_object'
-  s.version = '2.2.45'
+  s.version = '2.2.46'
   s.description = 'Cassandra ActiveModel'
   s.summary = 'Cassandra ActiveModel'
 
