@@ -8,6 +8,7 @@ module CassandraObject
       if status = super
         @previously_changed = changes
         @changed_attributes.clear
+        @original_attribute_values = nil
       end
       status
     end
@@ -17,12 +18,18 @@ module CassandraObject
       super.tap do
         @previously_changed = changes
         @changed_attributes.clear
+        @original_attribute_values = nil
       end
     end
 
     def write_attribute(name, value)
       name = name.to_s
-      unless attribute_changed?(name)
+
+      # handle orig -> new -> orig
+      if attribute_changed?(name)
+        orig = changed_attributes[name]
+        changed_attributes.delete(name) if orig == value
+      else
         old = read_attribute(name)
         changed_attributes[name] = old if old != value
       end

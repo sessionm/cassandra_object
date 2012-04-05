@@ -28,6 +28,8 @@ module CassandraObject
       def attribute(name, options)
         if model_attributes.empty?
           self.model_attributes = {}.with_indifferent_access
+        elsif (model_attributes.size == 2) && model_attributes.include?(:created_at) && model_attributes.include?(:updated_at)
+          self.model_attributes = self.model_attributes.dup
         end
 
         if type_mapping = CassandraObject::Type.get_mapping(options[:type])

@@ -30,9 +30,7 @@ module CassandraObject
     include ActiveModel::Conversion
     extend ActiveSupport::DescendantsTracker
     
-    #TODO: make the connection type configurable
-    include AsyncConnection
-    #include Connection
+    include Fiber.respond_to?(:current) ? AsyncConnection : Connection
     include Consistency
     include RowTTL
     include Identity
