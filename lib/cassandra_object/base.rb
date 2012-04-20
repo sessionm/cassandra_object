@@ -36,9 +36,9 @@ module CassandraObject
     include Identity
     include Attributes
     include Persistence
-    include Callbacks
     include Dirty
     include Validations
+    include Callbacks
     include Associations
     include Batches
     include FinderMethods
