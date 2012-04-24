@@ -21,6 +21,10 @@ module CassandraObject
       def schema_version
         Integer(@schema_version || self.class.current_schema_version)
       end
+
+      def attribute_will_change!(attribute)
+        logger.warn "#{self.class}##{attribute} added/removed/changed and attribute_will_change! not implemented."
+      end
     end
     
     module ClassMethods
