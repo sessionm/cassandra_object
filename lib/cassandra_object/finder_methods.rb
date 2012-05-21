@@ -6,10 +6,9 @@ module CassandraObject
         # kludge to play nice ActiveRecord association
         opts.assert_valid_keys(:conditions)
         raise(ArgumentError, "unexpected conditions") if opts[:conditions].present?
+        raise(ArgumentError, "invalid key: #{key}") if key.blank? || ! parse_key(key)
 
-        if key.present? &&
-           parse_key(key) &&
-           (attributes = ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) { connection.get(column_family, key) }) &&
+        if (attributes = ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) { connection.get(column_family, key) }) &&
            !attributes.empty?
           instantiate(key, attributes)
         else
