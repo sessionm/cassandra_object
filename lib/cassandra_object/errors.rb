@@ -7,4 +7,7 @@ module CassandraObject
   
   class RecordNotFound < CasssandraObjectError
   end
+
+  class InvalidKey < CasssandraObjectError
+  end
 end
