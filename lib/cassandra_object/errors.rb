@@ -1,13 +1,13 @@
 module CassandraObject
-  class CasssandraObjectError < StandardError
+  class CassandraObjectError < StandardError
   end
 
-  class RecordNotSaved < CasssandraObjectError
+  class RecordNotSaved < CassandraObjectError
   end
   
-  class RecordNotFound < CasssandraObjectError
+  class RecordNotFound < CassandraObjectError
   end
 
-  class InvalidKey < CasssandraObjectError
+  class InvalidKey < CassandraObjectError
   end
 end

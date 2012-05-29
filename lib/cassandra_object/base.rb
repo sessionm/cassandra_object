@@ -43,6 +43,7 @@ module CassandraObject
     include Batches
     include FinderMethods
     include Timestamps
+    include NestedAttributes
 
     attr_accessor :key
 

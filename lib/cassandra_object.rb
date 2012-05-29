@@ -25,6 +25,7 @@ module CassandraObject
   autoload :Type
   autoload :Schema
   autoload :RowTTL
+  autoload :NestedAttributes
 
   module Tasks
     extend ActiveSupport::Autoload
