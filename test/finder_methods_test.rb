@@ -9,7 +9,7 @@ class CassandraObject::FinderMethodsTest < CassandraObject::TestCase
   end
 
   test 'find missing record' do
-    assert_raise CassandraObject::RecordNotFound do
+    assert_raise CassandraObject::InvalidKey do
       Issue.find('what')
     end
   end

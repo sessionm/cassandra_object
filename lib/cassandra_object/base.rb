@@ -55,9 +55,24 @@ module CassandraObject
       @key = attributes.delete(:key)
       @new_record = true
       @destroyed = false
+      @readonly = false
       @attributes = {}.with_indifferent_access
       self.attributes = attributes
       @schema_version = self.class.current_schema_version
+    end
+
+    # Returns +true+ if the record is read only.
+    def readonly?
+      @readonly
+    end
+    
+    def readonly=(value)
+      @readonly = value
+    end
+
+    # Marks this record as read only.
+    def readonly!
+      self.readonly = true
     end
 
     def attributes

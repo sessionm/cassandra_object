@@ -151,6 +151,7 @@ module CassandraObject
 
     private
       def create_or_update
+        raise ReadOnlyRecord if readonly?
         result = new_record? ? create : update
         result != false
       end

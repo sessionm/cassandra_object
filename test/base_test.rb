@@ -25,4 +25,19 @@ class CassandraObject::BaseTest < CassandraObject::TestCase
     issue = Issue.create
     assert_equal issue.id.hash, issue.hash
   end
+
+  test 'readonly' do
+    issue = Issue.new
+    issue.readonly!
+    assert_raise CassandraObject::ReadOnlyRecord do
+      issue.save
+    end
+
+    issue = Issue.create
+    issue.readonly!
+    assert_raise CassandraObject::ReadOnlyRecord do
+      issue.save
+    end
+  end
+
 end
