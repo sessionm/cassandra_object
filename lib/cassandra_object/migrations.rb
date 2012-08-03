@@ -23,7 +23,7 @@ module CassandraObject
       end
 
       def attribute_will_change!(attribute)
-        logger.warn "#{self.class}##{attribute} added/removed/changed and attribute_will_change! not implemented."
+        Rails.logger.warn "#{self.class}##{attribute} added/removed/changed and attribute_will_change! not implemented."
       end
     end
     
