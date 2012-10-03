@@ -2,17 +2,53 @@ module CassandraObject
   module Identity
     # Key factories need to support 3 operations
     class UUIDKeyFactory < AbstractKeyFactory
-      class UUID < SimpleUUID::UUID
-        include Key
-
-        def to_param
-          to_guid
+      if defined?(JRUBY_VERSION)
+        class UUID
+          include Key
+          
+          def initialize(value=nil)
+            @uuid =
+              case value
+              when nil
+                java.util.UUID.randomUUID
+              when String
+                java.util.UUID.fromString(value)
+              when java.util.UUID
+                value
+              when self.class
+                value.instance_variable_get(:@uuid)
+              else
+                raise "unexpected value:#{value}/#{value.class}"
+              end
+          end
+          
+          def to_guid
+            @uuid.toString()
+          end
+          
+          def to_param
+            to_guid
+          end
+          
+          def to_s
+            # FIXME - this should probably write the raw bytes 
+            # but it's very hard to debug without this for now.
+            to_guid
+          end
         end
-        
-        def to_s
-          # FIXME - this should probably write the raw bytes 
-          # but it's very hard to debug without this for now.
-          to_guid
+      else
+        class UUID < SimpleUUID::UUID
+          include Key
+          
+          def to_param
+            to_guid
+          end
+          
+          def to_s
+            # FIXME - this should probably write the raw bytes 
+            # but it's very hard to debug without this for now.
+            to_guid
+          end
         end
       end
     

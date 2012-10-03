@@ -7,9 +7,16 @@ module CassandraObject
         opts.assert_valid_keys(:conditions)
         raise(ArgumentError, "unexpected conditions") if opts[:conditions].present?
         raise(CassandraObject::InvalidKey, "invalid key: #{key}") if key.blank? || ! parse_key(key)
-
-        if (attributes = ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) { connection.get(column_family, key) }) &&
-           !attributes.empty?
+        
+        attributes = ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) do
+          if :cassandra == self.connection_api
+            connection.get(column_family, key)
+          else
+            connection.get_row(column_family, key, self.connection_sopts)
+          end
+        end
+        
+        if attributes && ! attributes.empty?
           instantiate(key, attributes)
         else
           raise CassandraObject::RecordNotFound
@@ -22,9 +29,18 @@ module CassandraObject
         nil
       end
 
-      def get_counter(key, column)
+      def get_counter(key, column=nil)
         result = ActiveSupport::Notifications.instrument("get_counter.cassandra_object", column_family: column_family, key: key, column: column) do
-          connection.get(column_family, key, column)
+
+          if :cassandra == self.connection_api
+            connection.get(column_family, key, column)
+          else
+            if column
+              self.connection.get_counter_column(self.column_family, key, column, self.connection_sopts)
+            else
+              self.connection.get_counter_row(self.column_family, key, self.connection_sopts)
+            end
+          end
         end
 
         if result
@@ -35,7 +51,8 @@ module CassandraObject
       end
 
       def all(options = {})
-        limit = options[:limit] || 100
+        options.assert_keys!(:optional => {:limit => 100})
+
         results = ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: limit) do
           connection.get_range(column_family, key_count: limit, consistency: thrift_read_consistency)
         end

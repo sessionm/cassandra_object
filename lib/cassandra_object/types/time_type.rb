@@ -10,13 +10,13 @@ module CassandraObject
                 (Z|[+-]\d\d:\d\d)?
                 \s*\z/ix
 
-      def encode(time)
+      def encode(time, opts={})
         raise ArgumentError.new("#{self} requires a Time") unless time.kind_of?(Time)
         time.xmlschema(6)
       end
       module_function :encode
 
-      def decode(str)
+      def decode(str, opts={})
         return nil if str.empty?
         raise ArgumentError.new("Cannot convert #{str} into a Time") unless str.kind_of?(String) && str.match(REGEX)
         Time.xmlschema(str)

@@ -1,7 +1,7 @@
 module CassandraObject
   module Types
     module SetType
-      def encode(set)
+      def encode(set, opts={})
         if set.kind_of?(Set)
           set.to_json
         elsif set.kind_of?(Array)
@@ -12,7 +12,7 @@ module CassandraObject
       end
       module_function :encode
 
-      def decode(str)
+      def decode(str, opts={})
         return str.to_a if str.kind_of?(Set)
         ActiveSupport::JSON.decode(str)
       end

@@ -4,27 +4,31 @@ module CassandraObject
 
     module ClassMethods
       def add(key, value, *columns_and_options)
-        defaults = Cassandra::WRITE_DEFAULTS.merge(:consistency => Cassandra::Consistency::QUORUM)
-
-        column_family, column, sub_column, options = connection.extract_and_validate_params(self.column_family, key, columns_and_options, defaults)
+        column = columns_and_options.shift
+        sub_column = nil
+        if columns_and_options.first.is_a?(Hash)
+          options = columns_and_options.shift || {}
+        else
+          sub_column = columns_and_options.shift
+          options = columns_and_options.shift || {}
+        end
+        raise "unexpected args" unless columns_and_options.empty?
+ 
+        #column_family, column, sub_column, options = connection.extract_and_validate_params(self.column_family, key, columns_and_options, {})
 
         ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column, sub_column: sub_column, value: value) do
-          connection.add(column_family, key, value, *columns_and_options)
+
+          if sub_column
+            connection.add(column_family, key, {column => {sub_column => value}}, options)
+          else
+            connection.add(column_family, key, {column => value}, options)
+          end
         end
       end
 
       def remove(key)
         ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
           connection.remove(column_family, key.to_s, consistency: thrift_write_consistency)
-        end
-      end
-
-      # remove_counter is not exposed by Cassandra gem.
-      # TODO: move this to Cassandra gem.
-      def remove_counter(key)
-        ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
-          parent = CassandraThrift::ColumnParent.new(:column_family => column_family)
-          connection.send(:client).remove_counter(key, parent, thrift_write_consistency)
         end
       end
 
@@ -50,7 +54,7 @@ module CassandraObject
                 options[:consistency] = thrift_write_consistency
                 options[:ttl] = row_ttl unless row_ttl.nil?
               end
-              connection.insert(column_family, key.to_s, attributes, options)
+              connection.put_row(column_family, key.to_s, attributes, options)
             end
           end
         end
@@ -67,6 +71,7 @@ module CassandraObject
           object.instance_variable_set("@new_record", false)
           object.instance_variable_set("@destroyed", false)
           object.instance_variable_set("@attributes", decode_columns_hash(attributes))
+          object.instance_variable_set("@association_cache", {})
         end
       end
 
@@ -83,11 +88,7 @@ module CassandraObject
       def decode_columns_hash(attributes)
         Hash[attributes.map do |k, v|
                attribute = model_attributes[k]
-               decoded = if attribute.converter.method(:decode).arity == 1
-                           attribute.converter.decode(v)
-                         else
-                           attribute.converter.decode(v, attribute.options)
-                         end
+               decoded = attribute.converter.decode(v, attribute.options)
                [k.to_s, decoded]
              end]
       end
@@ -152,19 +153,19 @@ module CassandraObject
     private
       def create_or_update
         raise ReadOnlyRecord if readonly?
-        result = new_record? ? create : update
-        result != false
+        new_record? ? create : update
       end
 
       def create
         @key ||= self.class.next_key(self)
+        puts "CassandraObject#create setting @key:#{@key}"
         write
         @new_record = false
-        @key
+        ! @key.nil?
       end
     
       def update
-        write
+        ! write.nil?
       end
 
       def write

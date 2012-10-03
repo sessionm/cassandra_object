@@ -12,7 +12,8 @@ module CassandraObject
     autoload :OneToOne
     
     included do
-      class_inheritable_hash :associations
+      class_attribute :associations
+      self.associations = {}
     end
 
     module ClassMethods

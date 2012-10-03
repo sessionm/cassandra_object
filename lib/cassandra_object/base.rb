@@ -7,6 +7,18 @@ require 'cassandra_object/errors'
 module CassandraObject
   class Base
     class << self
+      def pluralize_table_names
+        true
+      end
+
+      def generated_feature_methods
+        @generated_feature_methods ||= begin
+          mod = const_set(:GeneratedFeatureMethods, Module.new)
+          include mod
+          mod
+        end
+      end
+
       def column_family=(column_family)
         @column_family = column_family
       end
@@ -30,7 +42,7 @@ module CassandraObject
     include ActiveModel::Conversion
     extend ActiveSupport::DescendantsTracker
     
-    include Fiber.respond_to?(:current) ? AsyncConnection : Connection
+    include Object.const_defined?(:EM) ? AsyncConnection : Connection
     include Consistency
     include RowTTL
     include Identity
@@ -49,7 +61,6 @@ module CassandraObject
 
     include Serialization
     include Migrations
-    include Mocking
 
     def initialize(attributes={})
       @key = attributes.delete(:key)
@@ -57,6 +68,7 @@ module CassandraObject
       @destroyed = false
       @readonly = false
       @attributes = {}.with_indifferent_access
+      @association_cache = {}
       self.attributes = attributes
       @schema_version = self.class.current_schema_version
     end

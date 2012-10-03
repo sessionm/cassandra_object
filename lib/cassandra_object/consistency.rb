@@ -1,3 +1,7 @@
+if defined?(Hector)
+  java_import 'me.prettyprint.hector.api.HConsistencyLevel'
+end
+
 module CassandraObject
   module Consistency
     extend ActiveSupport::Concern
@@ -13,11 +17,21 @@ module CassandraObject
     end
 
     module ClassMethods
-      THRIFT_LEVELS = {
-        :one    => Cassandra::Consistency::ONE,
-        :quorum => Cassandra::Consistency::QUORUM,
-        :all    => Cassandra::Consistency::ALL
-      }
+      if defined?(Cassandra)
+        THRIFT_LEVELS = {
+          :one    => Cassandra::Consistency::ONE,
+          :quorum => Cassandra::Consistency::QUORUM,
+          :all    => Cassandra::Consistency::ALL,
+          :any    => Cassandra::Consistency::ANY,
+        }
+      else
+        THRIFT_LEVELS = {
+          :one    => HConsistencyLevel::ONE,
+          :quorum => HConsistencyLevel::QUORUM,
+          :all    => HConsistencyLevel::ALL,
+          :any    => HConsistencyLevel::ANY,
+        }
+      end
 
       def thrift_read_consistency
         THRIFT_LEVELS[read_consistency] || (raise "Invalid consistency level #{read_consistency}")

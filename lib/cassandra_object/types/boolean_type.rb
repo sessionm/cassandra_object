@@ -5,7 +5,7 @@ module CassandraObject
       FALSE_VALS = [false, 'false', '0', '', nil]
       VALID_VALS = TRUE_VALS + FALSE_VALS
       
-      def encode(bool)
+      def encode(bool, opts={})
         unless VALID_VALS.include?(bool)
           raise ArgumentError.new("#{self} requires a boolean")
         end
@@ -13,7 +13,7 @@ module CassandraObject
       end
       module_function :encode
 
-      def decode(str)
+      def decode(str, opts={})
         raise ArgumentError.new("Cannot convert #{str} into a boolean") unless VALID_VALS.include?(str)
         TRUE_VALS.include?(str)
       end
