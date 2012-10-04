@@ -158,7 +158,6 @@ module CassandraObject
 
       def create
         @key ||= self.class.next_key(self)
-        puts "CassandraObject#create setting @key:#{@key}"
         write
         @new_record = false
         ! @key.nil?
