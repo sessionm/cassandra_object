@@ -24,7 +24,7 @@ module CassandraObject
 
       def get_counter(key, column)
         result = ActiveSupport::Notifications.instrument("get_counter.cassandra_object", column_family: column_family, key: key, column: column) do
-          connection.get(column_family, key, column)
+          connection.get(column_family, key, column, consistency: thrift_read_consistency)
         end
 
         if result
