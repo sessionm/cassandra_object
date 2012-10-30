@@ -45,7 +45,7 @@ module CassandraObject
       # Scroll down to the CfDef definition.
       def self.create_column_family(name, &block)
         say_with_time("create_column_family #{name}") do
-          column_family_tasks.create(name, &block)
+          column_family_tasks.create(name, CassandraObject::Base.config[:column_family_defaults], &block)
         end
       end
 

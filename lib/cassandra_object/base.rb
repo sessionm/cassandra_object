@@ -29,7 +29,8 @@ module CassandraObject
     extend ActiveModel::Naming
     include ActiveModel::Conversion
     extend ActiveSupport::DescendantsTracker
-    
+
+    include Configuration
     include Fiber.respond_to?(:current) ? AsyncConnection : Connection
     include Consistency
     include RowTTL

@@ -3,28 +3,39 @@ module CassandraObject
     extend ActiveSupport::Concern
 
     included do
-      cattr_accessor :consistency_levels
-      self.consistency_levels = [:one, :quorum, :all]
-
       class_attribute :write_consistency
       class_attribute :read_consistency
-      self.write_consistency  = :quorum
-      self.read_consistency   = :quorum
     end
 
     module ClassMethods
       THRIFT_LEVELS = {
         :one    => Cassandra::Consistency::ONE,
         :quorum => Cassandra::Consistency::QUORUM,
+        :local_quorum => Cassandra::Consistency::LOCAL_QUORUM,
         :all    => Cassandra::Consistency::ALL
       }
+      
+      DEFAULT_OPTIONS = {
+        :read_default => :quorum,
+        :write_default => :quorum,
+      }
+
+      @@default_read_consistency
+      @@default_write_consistency
+      def set_default_consistencies(config)
+        config = (config[:consistency] || {}).reverse_merge(DEFAULT_OPTIONS)
+        @@default_read_consistency = config[:read_default].to_sym
+        @@default_write_consistency = config[:write_default].to_sym
+      end
 
       def thrift_read_consistency
-        THRIFT_LEVELS[read_consistency] || (raise "Invalid consistency level #{read_consistency}")
+        consistency = read_consistency || @@default_read_consistency
+        THRIFT_LEVELS[consistency] || (raise "Invalid consistency level #{consistency}")
       end
 
       def thrift_write_consistency
-        THRIFT_LEVELS[write_consistency] || (raise "Invalid consistency level #{write_consistency}")
+        consistency = write_consistency || @@default_write_consistency
+        THRIFT_LEVELS[consistency] || (raise "Invalid consistency level #{consistency}")
       end
     end
   end

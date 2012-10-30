@@ -4,6 +4,7 @@ module CassandraObject
   extend ActiveSupport::Autoload
 
   autoload :Base
+  autoload :Configuration
   autoload :AsyncConnection
   autoload :Connection
   autoload :Attributes

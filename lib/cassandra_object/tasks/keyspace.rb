@@ -18,9 +18,16 @@ module CassandraObject
       end
 
       def create(name, options = {})
+        options = options.symbolize_keys
+
+        replication_opts = {
+          :strategy => 'org.apache.cassandra.locator.SimpleStrategy',
+          :factor => 1,
+        }.merge(options[:replication].symbolize_keys || {})
+
         opts = { :name => name.to_s,
-                 :strategy_class => 'org.apache.cassandra.locator.SimpleStrategy',
-                 :replication_factor => 1,
+                 :strategy_class => replication_opts[:strategy],
+                 :replication_factor => replication_opts[:factor],
                  :cf_defs => [] }.merge(options)
 
         ks = Cassandra::Keyspace.new.with_fields(opts)

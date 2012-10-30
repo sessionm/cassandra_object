@@ -9,11 +9,19 @@ module CassandraObject
     module ClassMethods
       DEFAULT_OPTIONS = {
         servers: "127.0.0.1:9160",
-        thrift: {}
       }
-      def establish_connection(spec)
-        spec.reverse_merge!(DEFAULT_OPTIONS)
-        self.connection = Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift].symbolize_keys!)
+      DEFAULT_THRIFT_OPTIONS = {
+        exception_class_overrides: [],
+      }
+
+      # This doesn't open a connection. It merely conifgures the connection object.
+      def establish_connection(config)
+        spec = config.reverse_merge(DEFAULT_OPTIONS)
+
+        spec[:thrift] = (spec[:thrift] || {}).reverse_merge(DEFAULT_THRIFT_OPTIONS)
+        spec[:thrift][:exception_class_overrides] = spec[:thrift][:exception_class_overrides].map(&:constantize)
+
+        self.connection = Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift])
       end
     end
   end
