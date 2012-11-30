@@ -12,7 +12,7 @@ module CassandraObject
             begin
               spec = connection_spec.dup
               
-              if EM.reactor_running?
+              if const_defined?(:EM) && EM.reactor_running?
                 require 'thrift_client/event_machine'
                 spec[:thrift].merge!(:transport => Thrift::EventMachineTransport,
                                      :transport_wrapper => nil)
