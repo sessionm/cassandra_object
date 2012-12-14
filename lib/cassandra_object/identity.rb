@@ -41,7 +41,7 @@ module CassandraObject
     end
 
     def id
-      key.to_s
+      key.try(:to_s)
     end
     alias :quoted_id :id
 
