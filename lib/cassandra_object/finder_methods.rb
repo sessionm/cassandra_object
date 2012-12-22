@@ -4,11 +4,12 @@ module CassandraObject
     module ClassMethods
       def find(key, opts={})
         # kludge to play nice ActiveRecord association
-        opts.assert_valid_keys(:conditions)
+        opts.assert_valid_keys(:conditions, :consistency)
+        opts[:consistency] ||= thrift_read_consistency
         raise(ArgumentError, "unexpected conditions") if opts[:conditions].present?
         raise(CassandraObject::InvalidKey, "invalid key: #{key}") if key.blank? || ! parse_key(key)
 
-        if (attributes = ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) { connection.get(column_family, key) }) &&
+        if (attributes = ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) { connection.get(column_family, key, opts.slice(:consistency)) }) &&
            !attributes.empty?
           instantiate(key, attributes)
         else
@@ -16,15 +17,18 @@ module CassandraObject
         end
       end
 
-      def find_by_id(key)
-        find(key)
+      def find_by_id(key, opts={})
+        find(key, opts)
       rescue CassandraObject::RecordNotFound
         nil
       end
 
-      def get_counter(key, column)
+      def get_counter(key, column, opts={})
+        opts.assert_valid_keys(:consistency)
+        opts[:consistency] ||= thrift_read_consistency
+
         result = ActiveSupport::Notifications.instrument("get_counter.cassandra_object", column_family: column_family, key: key, column: column) do
-          connection.get(column_family, key, column)
+          connection.get(column_family, key, column, opts)
         end
 
         if result
