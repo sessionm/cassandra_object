@@ -87,7 +87,7 @@ module CassandraObject
         
         ActiveSupport::Notifications.instrument("get_slice.cassandra_object", column_family: column_family, key: key, start: start, finish: finish) do
           {}.tap do |result|
-            connection.send(:client).get_slice(key, parent, predicate, opts[:consistency] || Cassandra::Consistency::ONE).each do |column|
+            connection.send(:client).get_slice(key, parent, predicate, opts[:consistency] || thrift_read_consistency).each do |column|
               result[column.counter_super_column.name] = _columns_to_hash(column.counter_super_column.columns)
             end
           end
