@@ -18,7 +18,9 @@ module CassandraObject
                                      :transport_wrapper => nil)
               end
               
-              Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift])
+              Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift]).tap do |conn|
+                conn.disable_node_auto_discovery! if spec[:disable_node_auto_discovery]
+              end
             end
         end
         def self.connection?() !!connection end

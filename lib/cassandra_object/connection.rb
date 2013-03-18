@@ -22,6 +22,8 @@ module CassandraObject
         spec[:thrift][:exception_class_overrides] = spec[:thrift][:exception_class_overrides].map(&:constantize)
 
         self.connection = Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift])
+        self.connection.disable_node_auto_discovery! if spec[:disable_node_auto_discovery]
+        self.connection
       end
     end
   end
