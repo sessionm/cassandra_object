@@ -4,17 +4,17 @@ module CassandraObject
 
     module ClassMethods
       def add(key, value, *columns_and_options)
-        defaults = Cassandra::WRITE_DEFAULTS.merge(:consistency => Cassandra::Consistency::QUORUM)
-
-        column_family, column, sub_column, options = connection.extract_and_validate_params(self.column_family, key, columns_and_options, defaults)
+        column_family, column, sub_column, options = connection.extract_and_validate_params(self.column_family, key, columns_and_options, {})
+        # the options are removed, leaving just columns
+        columns = columns_and_options
 
         ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column, sub_column: sub_column, value: value) do
-          connection.add(column_family, key, value, *columns_and_options)
+          connection.add(column_family, key, value, *columns, :consistency => thrift_write_consistency)
         end
       end
 
       def remove(key)
-        ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
+        ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do 
           connection.remove(column_family, key.to_s, consistency: thrift_write_consistency)
         end
       end

@@ -20,8 +20,8 @@ module CassandraObject
         :write_default => :quorum,
       }
 
-      @@default_read_consistency
-      @@default_write_consistency
+      @@default_read_consistency = DEFAULT_OPTIONS[:read_default]
+      @@default_write_consistency = DEFAULT_OPTIONS[:write_default]
       def set_default_consistencies(config)
         config = (config[:consistency] || {}).reverse_merge(DEFAULT_OPTIONS)
         @@default_read_consistency = config[:read_default].to_sym

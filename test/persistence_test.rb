@@ -45,6 +45,35 @@ class CassandraObject::PersistenceTest < CassandraObject::TestCase
     assert !issue.new_record?
   end
 
+  test 'add should work' do
+    assert_equal nil, Counter.connection.get(Counter.column_family, 'key', 'column')
+
+    Counter.add('key', 1, 'column')
+    assert_equal 1, Counter.connection.get(Counter.column_family, 'key', 'column')
+
+    Counter.add('key', -1, 'column')
+    assert_equal 0, Counter.connection.get(Counter.column_family, 'key', 'column')
+  end
+
+  test 'add should respect default and class consistency option' do
+    begin
+      old_default_write_cl = CassandraObject::Consistency::ClassMethods.class_variable_get(:@@default_read_consistency)
+      old_class_write_cl = Counter.write_consistency
+      CassandraObject::Consistency::ClassMethods.class_variable_set(:@@default_read_consistency, :quorum)
+      Counter.write_consistency = nil
+
+      Counter.connection.expects(:add).with(Counter.column_family, 'key', 2, 'column', :consistency => Cassandra::Consistency::QUORUM)
+      Counter.add('key', 2, 'column')
+
+      Counter.write_consistency = :local_quorum
+      Counter.connection.expects(:add).with(Counter.column_family, 'key', 2, 'column', :consistency => Cassandra::Consistency::LOCAL_QUORUM)
+      Counter.add('key', 2, 'column')
+    ensure
+      CassandraObject::Consistency::ClassMethods.class_variable_set(:@@default_read_consistency, old_class_write_cl)
+      Counter.write_consistency = old_class_write_cl
+    end
+  end
+
   test 'update_attribute' do
     issue = Issue.create
     issue.update_attribute(:description, 'lol')

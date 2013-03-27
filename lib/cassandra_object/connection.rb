@@ -18,7 +18,7 @@ module CassandraObject
       def establish_connection(config)
         spec = config.reverse_merge(DEFAULT_OPTIONS)
 
-        spec[:thrift] = (spec[:thrift] || {}).reverse_merge(DEFAULT_THRIFT_OPTIONS)
+        spec[:thrift] = (spec[:thrift].try(:symbolize_keys) || {}).reverse_merge(DEFAULT_THRIFT_OPTIONS)
         spec[:thrift][:exception_class_overrides] = spec[:thrift][:exception_class_overrides].map(&:constantize)
 
         self.connection = Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift])

@@ -1,0 +1,18 @@
+To run tests:
+
+1) Install gems
+
+$ rvm 1.9.3-p327@cassandra_object --create
+$ bundle install
+
+2) Create keyspace and CFs
+
+$ cassandra-cli
+] create keyspace place_directory_development;
+] use place_directory_development;
+] create column family Issues;
+] create column family Counters with default_validation_class=CounterColumnType and comparator=UTF8Type;
+
+3) Run tests
+
+$ rake test
