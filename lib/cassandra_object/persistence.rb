@@ -13,6 +13,24 @@ module CassandraObject
         end
       end
 
+      def add_multiple_columns(key, hash, options = {})
+        columns = hash.keys
+        values = []
+        if ! columns.empty? && hash[columns.first].is_a?(Hash)
+          column_spec = hash.map { |column, sub_columns| sub_columns.keys.map { |sub_column| [column, sub_column].join('.') } }.flatten.join(', ')
+          values = hash.map { |column, sub_columns| sub_columns.values }.flatten
+        else
+          column_spec = columns.join(', ')
+          values = hash.values
+        end
+        values.uniq!
+        value_spec = values.length == 1 ? values[0] : '<various>'
+
+        ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column_spec, value: value_spec) do
+          connection.add_multiple_columns(column_family, key, hash, :consistency => thrift_write_consistency)
+        end
+      end
+
       def remove(key)
         ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do 
           connection.remove(column_family, key.to_s, consistency: thrift_write_consistency)
