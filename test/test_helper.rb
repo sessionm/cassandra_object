@@ -8,6 +8,22 @@ require 'mocha/setup'
 
 class Issue < CassandraObject::Base
   key :uuid
+  attribute :created_at, :type => :time
+  attribute :updated_at, :type => :time
+  attribute :description, :type => :string
+  attribute :worth, :type => :decimal, :precision => 100
+  attribute :name, :type => :string
+  before_validation :set_defaults, :on => :create
+
+  def set_defaults
+    self.name ||= 'default name'
+  end
+end
+
+class IssueWithoutTimestamps < CassandraObject::Base
+  self.column_family = 'Issues'
+
+  key :uuid
   attribute :description, :type => :string
   attribute :worth, :type => :decimal, :precision => 100
   attribute :name, :type => :string
@@ -19,6 +35,9 @@ class Issue < CassandraObject::Base
 end
 
 class Counter < CassandraObject::Base
+  attribute :created_at, :type => :time
+  attribute :updated_at, :type => :time
+
   self.write_consistency = :all
 end
 

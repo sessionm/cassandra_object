@@ -24,4 +24,11 @@ class CassandraObject::TimestampsTest < CassandraObject::TestCase
 
     assert_equal time, issue.created_at
   end
+
+  test 'without timestamps' do
+    record = IssueWithoutTimestamps.create!
+    assert_equal nil, IssueWithoutTimestamps.connection.get(IssueWithoutTimestamps.column_family, record.id, 'created_at')
+    assert_equal nil, IssueWithoutTimestamps.connection.get(IssueWithoutTimestamps.column_family, record.id, 'updated_at')
+  end
+
 end

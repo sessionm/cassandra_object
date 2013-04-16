@@ -95,7 +95,9 @@ module CassandraObject
           # don't attempt to encode columns that are nil
           memo[column_name.to_s] = value.nil? ? '' : model_attributes[column_name].converter.encode(value).force_encoding('ASCII-8BIT')
           memo
-        end.merge({"schema_version" => schema_version.to_s})
+        end.tap do |hash|
+          hash["schema_version"] = schema_version.to_s unless schema_version.nil?
+        end
       end
 
       def decode_columns_hash(attributes)
