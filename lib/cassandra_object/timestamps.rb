@@ -3,21 +3,16 @@ module CassandraObject
     extend ActiveSupport::Concern
 
     included do
-      # Derived classes must declare the :created_at and :updated_at attributes.
+      attribute :created_at, type: :time#_with_zone
+      attribute :updated_at, type: :time#_with_zone
 
       before_create do #|r|
-        if attribute_method?(:created_at)
-          self.created_at ||= Time.current
-        end
-        if attribute_method?(:updated_at)
-          self.updated_at ||= Time.current
-        end
+        self.created_at ||= Time.current
+        self.updated_at ||= Time.current
       end
 
       before_update if: :changed? do #|r|
-        if attribute_method?(:updated_at)
-          self.updated_at = Time.current
-        end
+        self.updated_at = Time.current
       end
     end
   end

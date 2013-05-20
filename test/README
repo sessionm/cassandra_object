@@ -2,7 +2,7 @@ To run tests:
 
 1) Install gems
 
-$ cd cassandra_object
+$ rvm 1.9.3-p327@cassandra_object --create
 $ bundle install
 
 2) Create keyspace and CFs

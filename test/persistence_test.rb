@@ -36,17 +36,6 @@ class CassandraObject::PersistenceTest < CassandraObject::TestCase
     end
   end
 
-  test 'save! without current schema version' do
-    begin
-      old_current_schema_version = Issue.current_schema_version
-      Issue.current_schema_version = nil
-      record = Issue.create!
-      assert_equal nil, record.connection.get(Issue.column_family, record.id, 'schema_version')
-    ensure
-      Issue.current_schema_version = old_current_schema_version
-    end
-  end
-
   test 'destroy' do
     issue = Issue.create
     issue.destroy

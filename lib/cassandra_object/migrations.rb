@@ -19,8 +19,7 @@ module CassandraObject
     
     module InstanceMethods
       def schema_version
-        version = @schema_version || self.class.current_schema_version
-        version.nil? ? nil : Integer(version)
+        Integer(@schema_version || self.class.current_schema_version)
       end
 
       def attribute_will_change!(attribute)
