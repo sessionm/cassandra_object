@@ -7,6 +7,7 @@ module CassandraObject
 
       class_eval do
         @@fiber_connections = {}
+        @@schema = nil
         def self.connection()
           @@fiber_connections[Fiber.current.object_id] ||=
             begin
@@ -20,6 +21,11 @@ module CassandraObject
               
               Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift]).tap do |conn|
                 conn.disable_node_auto_discovery! if spec[:disable_node_auto_discovery]
+                if @@schema
+                  conn.instance_variable_set '@schema', @@schema
+                else
+                  @@schema = conn.schema
+                end
               end
             end
         end
