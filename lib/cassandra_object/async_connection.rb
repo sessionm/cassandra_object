@@ -24,7 +24,11 @@ module CassandraObject
                 if @@schema
                   conn.instance_variable_set '@schema', @@schema
                 else
-                  @@schema = conn.schema
+                  begin
+                    @@schema = conn.schema
+                  rescue CassandraThrift::InvalidRequestException => e
+                    # initially the schema doesn't exists
+                  end
                 end
               end
             end
