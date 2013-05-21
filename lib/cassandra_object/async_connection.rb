@@ -21,13 +21,15 @@ module CassandraObject
               
               Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift]).tap do |conn|
                 conn.disable_node_auto_discovery! if spec[:disable_node_auto_discovery]
-                if @@schema
-                  conn.instance_variable_set '@schema', @@schema
-                else
-                  begin
-                    @@schema = conn.schema
-                  rescue CassandraThrift::InvalidRequestException => e
-                    # initially the schema doesn't exists
+                if spec[:cache_schema]
+                  if @@schema
+                    conn.instance_variable_set '@schema', @@schema
+                  else
+                    begin
+                      @@schema = conn.schema
+                    rescue CassandraThrift::InvalidRequestException => e
+                      # initially the schema doesn't exists
+                    end
                   end
                 end
               end
