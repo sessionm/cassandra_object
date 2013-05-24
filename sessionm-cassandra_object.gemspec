@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |s|
   s.name = 'sessionm-cassandra_object'
-  s.version = '2.4.5'
+  s.version = '2.4.6'
   s.description = 'Cassandra ActiveModel'
   s.summary = 'Cassandra ActiveModel'
 
@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
   s.require_paths = ['lib']
 
   s.add_runtime_dependency('rails', "~> 3.0.9")
-  s.add_runtime_dependency('sessionm-cassandra', ">= 1.0.0")
+  s.add_runtime_dependency('sessionm-cassandra', ">= 1.0.1")
 
   s.add_development_dependency('bundler', ">= 1.0.0")
 end
