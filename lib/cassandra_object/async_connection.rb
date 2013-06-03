@@ -7,31 +7,72 @@ module CassandraObject
 
       class_eval do
         @@fiber_connections = {}
+        def self.fiber_connections
+          @@fiber_connections
+        end
+
+        def fiber_connections
+          self.class.fiber_connections
+        end
+
+        def self.new_event_machine_connection
+          spec = connection_spec.dup
+              
+          require 'thrift_client/event_machine'
+          spec[:thrift].merge!(:transport => Thrift::EventMachineTransport,
+                               :transport_wrapper => nil)
+              
+          Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift]).tap do |conn|
+            conn.disable_node_auto_discovery! if spec[:disable_node_auto_discovery]
+            if spec[:cache_schema]
+              if @@schema
+                conn.instance_variable_set '@schema', @@schema
+              else
+                begin
+                  @@schema = conn.schema
+                rescue CassandraThrift::InvalidRequestException => e
+                  # initially the schema doesn't exists
+                end
+              end
+            end
+          end
+        end
+
+        def new_event_machine_connection
+          self.class.new_event_machine_connection
+        end
+
+        def self.new_connection
+          spec = connection_spec.dup
+              
+          Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift]).tap do |conn|
+            conn.disable_node_auto_discovery! if spec[:disable_node_auto_discovery]
+            if spec[:cache_schema]
+              if @@schema
+                conn.instance_variable_set '@schema', @@schema
+              else
+                begin
+                  @@schema = conn.schema
+                rescue CassandraThrift::InvalidRequestException => e
+                  # initially the schema doesn't exists
+                end
+              end
+            end
+          end
+        end
+
+        def new_connection
+          self.class.new_connection
+        end
+
         @@schema = nil
         def self.connection()
           @@fiber_connections[Fiber.current.object_id] ||=
             begin
-              spec = connection_spec.dup
-              
               if const_defined?(:EM) && EM.reactor_running?
-                require 'thrift_client/event_machine'
-                spec[:thrift].merge!(:transport => Thrift::EventMachineTransport,
-                                     :transport_wrapper => nil)
-              end
-              
-              Cassandra.new(spec[:keyspace], spec[:servers], spec[:thrift]).tap do |conn|
-                conn.disable_node_auto_discovery! if spec[:disable_node_auto_discovery]
-                if spec[:cache_schema]
-                  if @@schema
-                    conn.instance_variable_set '@schema', @@schema
-                  else
-                    begin
-                      @@schema = conn.schema
-                    rescue CassandraThrift::InvalidRequestException => e
-                      # initially the schema doesn't exists
-                    end
-                  end
-                end
+                new_event_machine_connection
+              else
+                new_connection
               end
             end
         end
