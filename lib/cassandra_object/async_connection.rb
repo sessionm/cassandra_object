@@ -1,3 +1,5 @@
+require 'with_connection'
+
 module CassandraObject
   module AsyncConnection
     extend ActiveSupport::Concern
@@ -6,15 +8,6 @@ module CassandraObject
       class_attribute :connection_spec
 
       class_eval do
-        @@fiber_connections = {}
-        def self.fiber_connections
-          @@fiber_connections
-        end
-
-        def fiber_connections
-          self.class.fiber_connections
-        end
-
         def self.new_event_machine_connection
           spec = connection_spec.dup
               
@@ -66,22 +59,36 @@ module CassandraObject
         end
 
         @@schema = nil
-        def self.connection()
-          @@fiber_connections[Fiber.current.object_id] ||=
+        @@connection_pool = nil
+        def self.connection_pool
+          @@connection_pool ||=
             begin
-              if const_defined?(:EM) && EM.reactor_running?
-                new_event_machine_connection
-              else
-                new_connection
+              adapter_method = Proc.new do
+                EM.reactor_running? ? self.new_event_machine_connection : self.new_connection
               end
+              spec = ActiveRecord::Base::ConnectionSpecification.new self.connection_spec, adapter_method
+              WithConnection::ConnectionPool.new "cassandra", spec
             end
+        end
+        def connection_pool
+          self.class.connection_pool
+        end
+
+        def self.connection()
+          self.connection_pool.connection
         end
         def self.connection?() !!connection end
 
+        def self.with_connection(&block)
+          self.connection_pool.with_connection(&block)
+        end
+
+        def with_connection(&block)
+          self.class.with_connection(&block)
+        end
+
         def self.disconnect!
-          @@fiber_connections.delete(Fiber.current.object_id).tap { |conn|
-            conn.disconnect! if conn
-          }
+          self.connection_pool.disconnect!
         end
 
         def connection
