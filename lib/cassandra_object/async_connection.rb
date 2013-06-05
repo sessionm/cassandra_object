@@ -59,16 +59,38 @@ module CassandraObject
         end
 
         @@schema = nil
-        @@connection_pool = nil
-        def self.connection_pool
-          @@connection_pool ||=
+        @@async_connection_pool = nil
+        @@sync_connection_pool = nil
+        def self.async_connection_pool
+          @@async_connection_pool ||=
             begin
               adapter_method = Proc.new do
-                EM.reactor_running? ? self.new_event_machine_connection : self.new_connection
+                self.new_event_machine_connection
               end
               spec = ActiveRecord::Base::ConnectionSpecification.new self.connection_spec, adapter_method
-              WithConnection::ConnectionPool.new "cassandra", spec
+              WithConnection::ConnectionPool.new "async cassandra", spec
             end
+        end
+        def async_connection_pool
+          self.class.async_connection_pool
+        end
+
+        def self.sync_connection_pool
+          @@sync_connection_pool ||=
+            begin
+              adapter_method = Proc.new do
+                self.new_connection
+              end
+              spec = ActiveRecord::Base::ConnectionSpecification.new self.connection_spec, adapter_method
+              WithConnection::ConnectionPool.new "sync cassandra", spec
+            end
+        end
+        def sync_connection_pool
+          self.class.sync_connection_pool
+        end
+
+        def self.connection_pool
+          EM.reactor_running? ? self.async_connection_pool : self.sync_connection_pool
         end
         def connection_pool
           self.class.connection_pool
@@ -88,7 +110,14 @@ module CassandraObject
         end
 
         def self.disconnect!
-          self.connection_pool.disconnect!
+          self.async_connection_pool.disconnect! if @@async_connection_pool
+          self.sync_connection_pool.disconnect! if @@sync_connection_pool
+          @@sync_connection_pool = nil
+          @@async_connection_pool = nil
+        end
+
+        def disconnect!
+          self.class.disconnect!
         end
 
         def connection
