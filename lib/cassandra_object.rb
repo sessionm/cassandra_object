@@ -5,7 +5,6 @@ module CassandraObject
 
   autoload :Base
   autoload :Configuration
-  autoload :AsyncConnection
   autoload :Connection
   autoload :Attributes
   autoload :Dirty

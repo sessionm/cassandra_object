@@ -31,7 +31,7 @@ module CassandraObject
     extend ActiveSupport::DescendantsTracker
 
     include Configuration
-    include Fiber.respond_to?(:current) ? AsyncConnection : Connection
+    include Connection
     include Consistency
     include RowTTL
     include Identity
