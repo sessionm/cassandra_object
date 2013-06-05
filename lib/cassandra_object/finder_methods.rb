@@ -9,8 +9,16 @@ module CassandraObject
         raise(ArgumentError, "unexpected conditions") if opts[:conditions].present?
         raise(CassandraObject::InvalidKey, "invalid key: #{key}") if key.blank? || ! parse_key(key)
 
-        if (attributes = ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) { connection.get(column_family, key, opts.slice(:consistency)) }) &&
-           !attributes.empty?
+        attributes =
+          begin
+            ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) do
+              CassandraObject::Base.with_connection do
+                connection.get column_family, key, opts.slice(:consistency)
+              end
+            end
+          end
+
+        if attributes && ! attributes.empty?
           instantiate(key, attributes)
         else
           raise CassandraObject::RecordNotFound
@@ -28,7 +36,9 @@ module CassandraObject
         opts[:consistency] ||= thrift_read_consistency
 
         result = ActiveSupport::Notifications.instrument("get_counter.cassandra_object", column_family: column_family, key: key, column: column) do
-          connection.get(column_family, key, column, opts)
+          CassandraObject::Base.with_connection do
+            connection.get(column_family, key, column, opts)
+          end
         end
 
         if result
@@ -41,7 +51,9 @@ module CassandraObject
       def all(options = {})
         limit = options[:limit] || 100
         results = ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: limit) do
-          connection.get_range(column_family, key_count: limit, consistency: thrift_read_consistency)
+          CassandraObject::Base.with_connection do
+            connection.get_range(column_family, key_count: limit, consistency: thrift_read_consistency)
+          end
         end
 
         results.map do |k, v|
@@ -76,13 +88,15 @@ module CassandraObject
 
       # Selecting a slice of a super column
       def get_slice(key, start, finish, opts={})
-        connection.get_slice(column_family,
-                             key, 
-                             start,
-                             finish,
-                             opts[:count] || 100,
-                             opts[:reversed] || false,
-                             opts[:consistency] || thrift_read_consistency)
+        CassandraObject::Base.with_connection do
+          connection.get_slice(column_family,
+                               key, 
+                               start,
+                               finish,
+                               opts[:count] || 100,
+                               opts[:reversed] || false,
+                               opts[:consistency] || thrift_read_consistency)
+        end
       end
 
       private
@@ -105,7 +119,9 @@ module CassandraObject
 
         def multi_get(keys, options={})
           attribute_results = ActiveSupport::Notifications.instrument("multi_get.cassandra_object", column_family: column_family, keys: keys) do
-            connection.multi_get(column_family, keys.map(&:to_s), consistency: thrift_read_consistency)
+            CassandraObject::Base.with_connection do
+              connection.multi_get(column_family, keys.map(&:to_s), consistency: thrift_read_consistency)
+            end
           end
 
           instantiate_many(attribute_results)
@@ -115,8 +131,10 @@ module CassandraObject
           options = options.reverse_merge(:consistency => thrift_read_consistency)
 
           attribute_results = ActiveSupport::Notifications.instrument("multi_get_by_expression.cassandra_object", column_family: column_family, expression: expression) do
-            intermediate_results = connection.get_indexed_slices(column_family, expression, options)
-            connection.send(:multi_columns_to_hash!, column_family, intermediate_results)
+            CassandraObject::Base.with_connection do
+              intermediate_results = connection.get_indexed_slices(column_family, expression, options)
+              connection.send(:multi_columns_to_hash!, column_family, intermediate_results)
+            end
           end
 
           instantiate_many(attribute_results)

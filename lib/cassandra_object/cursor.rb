@@ -23,11 +23,16 @@ module CassandraObject
       end
       
       while objects.size < number_to_find && !out_of_keys
-        index_results = connection.get(@column_family, @key, @super_column,
-          count: limit,
-          start: start_with,
-          reversed: @options[:reversed],
-          consistency: target_class.thrift_read_consistency)
+        index_results = 
+          begin
+            CassandraObject::Base.with_connection do
+              connection.get(@column_family, @key, @super_column,
+                             count: limit,
+                             start: start_with,
+                             reversed: @options[:reversed],
+                             consistency: target_class.thrift_read_consistency)
+            end
+          end
 
         out_of_keys  = index_results.size < limit
 
@@ -80,7 +85,9 @@ module CassandraObject
     end
     
     def remove(index_key)
-      connection.remove(@column_family, @key, @super_column, index_key, consistency: target_class.thrift_write_consistency)
+      CassandraObject::Base.with_connection do
+        connection.remove(@column_family, @key, @super_column, index_key, consistency: target_class.thrift_write_consistency)
+      end
     end
     
     def validator(&validator)

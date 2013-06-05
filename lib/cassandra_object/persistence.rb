@@ -4,12 +4,14 @@ module CassandraObject
 
     module ClassMethods
       def add(key, value, *columns_and_options)
-        column_family, column, sub_column, options = connection.extract_and_validate_params(self.column_family, key, columns_and_options, {})
+        column_family, column, sub_column, options = CassandraObject::Base.with_connection { connection.extract_and_validate_params(self.column_family, key, columns_and_options, {}) }
         # the options are removed, leaving just columns
         columns = columns_and_options
 
         ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column, sub_column: sub_column, value: value) do
-          connection.add(column_family, key, value, *columns, :consistency => thrift_write_consistency)
+          CassandraObject::Base.with_connection do
+            connection.add(column_family, key, value, *columns, :consistency => thrift_write_consistency)
+          end
         end
       end
 
@@ -27,13 +29,17 @@ module CassandraObject
         value_spec = values.length == 1 ? values[0] : '<various>'
 
         ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column_spec, value: value_spec) do
-          connection.add_multiple_columns(column_family, key, hash, :consistency => thrift_write_consistency)
+          CassandraObject::Base.with_connection do
+            connection.add_multiple_columns(column_family, key, hash, :consistency => thrift_write_consistency)
+          end
         end
       end
 
       def remove(key)
-        ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do 
-          connection.remove(column_family, key.to_s, consistency: thrift_write_consistency)
+        ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
+          CassandraObject::Base.with_connection do
+            connection.remove(column_family, key.to_s, consistency: thrift_write_consistency)
+          end
         end
       end
 
@@ -42,13 +48,17 @@ module CassandraObject
       def remove_counter(key)
         ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
           parent = CassandraThrift::ColumnParent.new(:column_family => column_family)
-          connection.send(:client).remove_counter(key, parent, thrift_write_consistency)
+          CassandraObject::Base.with_connection do
+            connection.send(:client).remove_counter(key, parent, thrift_write_consistency)
+          end
         end
       end
 
       def delete_all
         ActiveSupport::Notifications.instrument("truncate.cassandra_object", column_family: column_family) do
-          connection.truncate!(column_family)
+          CassandraObject::Base.with_connection do
+            connection.truncate!(column_family)
+          end
         end
       end
 
@@ -68,7 +78,9 @@ module CassandraObject
                 options[:consistency] = thrift_write_consistency
                 options[:ttl] = row_ttl unless row_ttl.nil?
               end
-              connection.insert(column_family, key.to_s, attributes, options)
+              CassandraObject::Base.with_connection do
+                connection.insert(column_family, key.to_s, attributes, options)
+              end
             end
           end
         end
