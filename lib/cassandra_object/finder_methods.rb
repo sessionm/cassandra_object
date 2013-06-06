@@ -11,8 +11,8 @@ module CassandraObject
 
         attributes =
           begin
-            ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) do
-              CassandraObject::Base.with_connection do
+            CassandraObject::Base.with_connection(key) do
+              ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) do
                 connection.get column_family, key, opts.slice(:consistency)
               end
             end
@@ -35,8 +35,8 @@ module CassandraObject
         opts.assert_valid_keys(:consistency)
         opts[:consistency] ||= thrift_read_consistency
 
-        result = ActiveSupport::Notifications.instrument("get_counter.cassandra_object", column_family: column_family, key: key, column: column) do
-          CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection(key) do
+          result = ActiveSupport::Notifications.instrument("get_counter.cassandra_object", column_family: column_family, key: key, column: column) do
             connection.get(column_family, key, column, opts)
           end
         end
@@ -50,8 +50,8 @@ module CassandraObject
 
       def all(options = {})
         limit = options[:limit] || 100
-        results = ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: limit) do
-          CassandraObject::Base.with_connection do
+        results = CassandraObject::Base.with_connection do
+          ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: limit) do
             connection.get_range(column_family, key_count: limit, consistency: thrift_read_consistency)
           end
         end
@@ -88,7 +88,7 @@ module CassandraObject
 
       # Selecting a slice of a super column
       def get_slice(key, start, finish, opts={})
-        CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection(key) do
           connection.get_slice(column_family,
                                key, 
                                start,
@@ -118,8 +118,8 @@ module CassandraObject
         end
 
         def multi_get(keys, options={})
-          attribute_results = ActiveSupport::Notifications.instrument("multi_get.cassandra_object", column_family: column_family, keys: keys) do
-            CassandraObject::Base.with_connection do
+          attribute_results = CassandraObject::Base.with_connection do
+            ActiveSupport::Notifications.instrument("multi_get.cassandra_object", column_family: column_family, keys: keys) do
               connection.multi_get(column_family, keys.map(&:to_s), consistency: thrift_read_consistency)
             end
           end
@@ -130,8 +130,8 @@ module CassandraObject
         def multi_get_by_expression(expression, options={})
           options = options.reverse_merge(:consistency => thrift_read_consistency)
 
-          attribute_results = ActiveSupport::Notifications.instrument("multi_get_by_expression.cassandra_object", column_family: column_family, expression: expression) do
-            CassandraObject::Base.with_connection do
+          attribute_results = CassandraObject::Base.with_connection do
+            ActiveSupport::Notifications.instrument("multi_get_by_expression.cassandra_object", column_family: column_family, expression: expression) do
               intermediate_results = connection.get_indexed_slices(column_family, expression, options)
               connection.send(:multi_columns_to_hash!, column_family, intermediate_results)
             end

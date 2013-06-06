@@ -25,7 +25,7 @@ module CassandraObject
       while objects.size < number_to_find && !out_of_keys
         index_results = 
           begin
-            CassandraObject::Base.with_connection do
+            CassandraObject::Base.with_connection(@key) do
               connection.get(@column_family, @key, @super_column,
                              count: limit,
                              start: start_with,
@@ -85,7 +85,7 @@ module CassandraObject
     end
     
     def remove(index_key)
-      CassandraObject::Base.with_connection do
+      CassandraObject::Base.with_connection(@key) do
         connection.remove(@column_family, @key, @super_column, index_key, consistency: target_class.thrift_write_consistency)
       end
     end

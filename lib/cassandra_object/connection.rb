@@ -108,12 +108,12 @@ module CassandraObject
         end
         def self.connection?() !!connection end
 
-        def self.with_connection(&block)
+        def self.with_connection(key=nil, &block)
           self.connection_pool.with_connection(&block)
         end
 
-        def with_connection(&block)
-          self.class.with_connection(&block)
+        def with_connection(key=nil, &block)
+          self.class.with_connection(key, &block)
         end
 
         def self.disconnect!

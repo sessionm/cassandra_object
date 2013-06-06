@@ -19,8 +19,8 @@ module CassandraObject
       def add(owner, record, set_inverse = true)
         key = owner.key
         attributes = {@association_name=>{new_key=>record.key.to_s}}
-        ActiveSupport::Notifications.instrument("insert.cassandra_object", :column_family => column_family, :key => key, :attributes => attributes) do
-          CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection(key) do
+          ActiveSupport::Notifications.instrument("insert.cassandra_object", :column_family => column_family, :key => key, :attributes => attributes) do
             connection.insert(column_family, key.to_s, attributes, :consistency => @owner_class.thrift_write_consistency)
           end
         end

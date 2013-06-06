@@ -38,8 +38,8 @@ module CassandraObject
       
       def remove(key)
         begin
-          ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: relationships_column_family, key: key) do
-            CassandraObject::Base.with_connection do
+          CassandraObject::Base.with_connection(key) do
+            ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: relationships_column_family, key: key) do
               connection.remove(relationships_column_family, key.to_s, consistency: thrift_write_consistency)
             end
           end

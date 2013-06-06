@@ -24,15 +24,15 @@ module CassandraObject
       end
 
       def clear(owner)
-        ActiveSupport::Notifications.instrument("remove.cassandra_object", :column_family => column_family, :key => owner.key, :columns => @association_name) do
-          CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection(owner.key) do
+          ActiveSupport::Notifications.instrument("remove.cassandra_object", :column_family => column_family, :key => owner.key, :columns => @association_name) do
             connection.remove(column_family, owner.key.to_s, @association_name)
           end
         end
       end
 
       def find(owner)
-        CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection(owner.key.to_s) do
           if key = connection.get(column_family, owner.key.to_s, @association_name.to_s, :count=>1).values.first
             target_class.get(key)
           else
@@ -45,8 +45,8 @@ module CassandraObject
         clear(owner)
         key = owner.key
         attributes = {@association_name=>{new_key=>record.key.to_s}}
-        ActiveSupport::Notifications.instrument("insert.cassandra_object", :column_family => column_family, :key => key, :attributes => attributes) do
-          CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection(key) do
+          ActiveSupport::Notifications.instrument("insert.cassandra_object", :column_family => column_family, :key => key, :attributes => attributes) do
             connection.insert(column_family, key.to_s, attributes, :consistency => @owner_class.thrift_write_consistency)
           end
         end

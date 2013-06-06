@@ -8,8 +8,8 @@ module CassandraObject
         # the options are removed, leaving just columns
         columns = columns_and_options
 
-        ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column, sub_column: sub_column, value: value) do
-          CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection(key) do
+          ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column, sub_column: sub_column, value: value) do
             connection.add(column_family, key, value, *columns, :consistency => thrift_write_consistency)
           end
         end
@@ -28,16 +28,16 @@ module CassandraObject
         values.uniq!
         value_spec = values.length == 1 ? values[0] : '<various>'
 
-        ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column_spec, value: value_spec) do
-          CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection(key) do
+          ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column_spec, value: value_spec) do
             connection.add_multiple_columns(column_family, key, hash, :consistency => thrift_write_consistency)
           end
         end
       end
 
       def remove(key)
-        ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
-          CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection(key) do
+          ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
             connection.remove(column_family, key.to_s, consistency: thrift_write_consistency)
           end
         end
@@ -46,17 +46,17 @@ module CassandraObject
       # remove_counter is not exposed by Cassandra gem.
       # TODO: move this to Cassandra gem.
       def remove_counter(key)
-        ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
-          parent = CassandraThrift::ColumnParent.new(:column_family => column_family)
-          CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection(key) do
+          ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
+            parent = CassandraThrift::ColumnParent.new(:column_family => column_family)
             connection.send(:client).remove_counter(key, parent, thrift_write_consistency)
           end
         end
       end
 
       def delete_all
-        ActiveSupport::Notifications.instrument("truncate.cassandra_object", column_family: column_family) do
-          CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection do
+          ActiveSupport::Notifications.instrument("truncate.cassandra_object", column_family: column_family) do
             connection.truncate!(column_family)
           end
         end
@@ -72,13 +72,14 @@ module CassandraObject
         key.tap do |key|
           unless attributes.blank?
             attributes = encode_columns_hash(attributes, schema_version)
-            ActiveSupport::Notifications.instrument("insert.cassandra_object", column_family: column_family, key: key, attributes: attributes) do
+            CassandraObject::Base.with_connection(key) do
+              ActiveSupport::Notifications.instrument("insert.cassandra_object", column_family: column_family, key: key, attributes: attributes) do
               
-              options = {}.tap do |options|
-                options[:consistency] = thrift_write_consistency
-                options[:ttl] = row_ttl unless row_ttl.nil?
-              end
-              CassandraObject::Base.with_connection do
+                options = {}.tap do |options|
+                  options[:consistency] = thrift_write_consistency
+                  options[:ttl] = row_ttl unless row_ttl.nil?
+                end
+
                 connection.insert(column_family, key.to_s, attributes, options)
               end
             end
