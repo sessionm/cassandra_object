@@ -35,8 +35,8 @@ module CassandraObject
         opts.assert_valid_keys(:consistency)
         opts[:consistency] ||= thrift_read_consistency
 
-        CassandraObject::Base.with_connection(key) do
-          result = ActiveSupport::Notifications.instrument("get_counter.cassandra_object", column_family: column_family, key: key, column: column) do
+        result = CassandraObject::Base.with_connection(key) do
+          ActiveSupport::Notifications.instrument("get_counter.cassandra_object", column_family: column_family, key: key, column: column) do
             connection.get(column_family, key, column, opts)
           end
         end
