@@ -106,7 +106,7 @@ module CassandraObject
 
         @@ranged_connection_pool_key_algo = nil
         def self.ranged_connection_pool_key_algo
-          @@ranged_connection_pool_key_algo ||= Proc.new { |key| Digest::MD5.hexdigest key }
+          @@ranged_connection_pool_key_algo ||= Proc.new { |key| Digest::MD5.hexdigest key.to_s }
         end
 
         def self.create_ranged_connection_pool(async)
