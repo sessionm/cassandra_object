@@ -157,15 +157,11 @@ module CassandraObject
 
         if defined?(EM)
           def self.connection_pool
-            if self.connection_spec[:datacenter]
-              EM.reactor_running? ? self.async_ranged_connection_pool : self.sync_ranged_connection_pool
-            else
-              EM.reactor_running? ? self.async_connection_pool : self.sync_connection_pool
-            end
+            EM.reactor_running? ? self.async_connection_pool : self.sync_connection_pool
           end
         else
           def self.connection_pool
-            self.connection_spec[:datacenter] ? self.ranged_connection_pool : self.sync_connection_pool
+            self.sync_connection_pool
           end
         end
 
@@ -174,12 +170,12 @@ module CassandraObject
         end
 
         def self.connection()
-          self.connection_pool.connection
+          self.connection_spec[:datacenter] ? self.ranged_connection.connection : self.connection_pool.connection
         end
         def self.connection?() !!connection end
 
         def self.with_connection(key=nil, &block)
-          self.connection_pool.with_connection(&block)
+          self.connection_spec[:datacenter] ? self.ranged_connection_pool.with_connection(key, &block) : self.connection_pool.with_connection(&block)
         end
 
         def with_connection(key=nil, &block)
