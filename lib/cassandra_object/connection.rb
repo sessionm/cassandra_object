@@ -99,7 +99,7 @@ module CassandraObject
             {
               :start_token => sprintf('%032x', t.start_token.to_i), 
               :end_token => t.end_token.to_i == 0 ? ('f' * 32) : sprintf('%032x', t.end_token.to_i - 1), 
-              :servers => t.endpoint_details.select { |d| d.datacenter == datacenter }.map(&:host)
+              :servers => t.endpoint_details.select { |d| d.datacenter == datacenter }.map { |d| "#{d.host}:9160" }
             }
           end
         end
