@@ -170,7 +170,7 @@ module CassandraObject
         end
 
         def self.connection()
-          self.connection_spec[:datacenter] ? self.ranged_connection.connection : self.connection_pool.connection
+          self.connection_spec[:datacenter] ? self.ranged_connection_pool.connection : self.connection_pool.connection
         end
         def self.connection?() !!connection end
 
