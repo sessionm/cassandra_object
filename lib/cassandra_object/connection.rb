@@ -8,89 +8,60 @@ module CassandraObject
       class_attribute :connection_spec
 
       class_eval do
-        def self.new_event_machine_connection(servers=nil)
-          spec = connection_spec.dup
-              
-          require 'thrift_client/event_machine'
-          spec[:thrift].merge!(:transport => Thrift::EventMachineTransport,
-                               :transport_wrapper => nil)
-              
-          Cassandra.new(spec[:keyspace], servers || spec[:servers], spec[:thrift]).tap do |conn|
-            conn.disable_node_auto_discovery! if spec[:disable_node_auto_discovery]
-            if spec[:cache_schema]
-              if @@schema
-                conn.instance_variable_set '@schema', @@schema
-              else
-                begin
-                  @@schema = conn.schema
-                rescue CassandraThrift::InvalidRequestException => e
-                  # initially the schema doesn't exists
-                end
-              end
-            end
-          end
-        end
-
-        def new_event_machine_connection(servers=nil)
-          self.class.new_event_machine_connection(servers)
-        end
-
-        def self.new_connection(servers=nil)
-          spec = connection_spec.dup
-              
-          Cassandra.new(spec[:keyspace], servers || spec[:servers], spec[:thrift]).tap do |conn|
-            conn.disable_node_auto_discovery! if spec[:disable_node_auto_discovery]
-            if spec[:cache_schema]
-              if @@schema
-                conn.instance_variable_set '@schema', @@schema
-              else
-                begin
-                  @@schema = conn.schema
-                rescue CassandraThrift::InvalidRequestException => e
-                  # initially the schema doesn't exists
-                end
-              end
-            end
-          end
-        end
-
-        def new_connection(servers=nil)
-          self.class.new_connection(servers)
-        end
 
         @@schema = nil
-        @@async_connection_pool = nil
-        @@sync_connection_pool = nil
-        def self.async_connection_pool
-          @@async_connection_pool ||=
-            begin
-              adapter_method = Proc.new do
-                self.new_event_machine_connection
+        def self.new_connection(async, servers)
+          spec = connection_spec.dup
+
+          if async
+            require 'thrift_client/event_machine'
+            spec[:thrift].merge!(:transport => Thrift::EventMachineTransport,
+                                 :transport_wrapper => nil)
+          end
+
+          Cassandra.new(spec[:keyspace], servers || spec[:servers], spec[:thrift]).tap do |conn|
+            conn.disable_node_auto_discovery! if spec[:disable_node_auto_discovery]
+            if spec[:cache_schema]
+              if @@schema
+                conn.instance_variable_set '@schema', @@schema
+              else
+                begin
+                  @@schema = conn.schema
+                rescue CassandraThrift::InvalidRequestException => e
+                  # initially the schema doesn't exists
+                end
               end
-              spec = ActiveRecord::Base::ConnectionSpecification.new self.connection_spec, adapter_method
-              WithConnection::ConnectionPool.new "async cassandra", spec
             end
-        end
-        def async_connection_pool
-          self.class.async_connection_pool
+          end
         end
 
-        def self.sync_connection_pool
-          @@sync_connection_pool ||=
-            begin
-              adapter_method = Proc.new do
-                self.new_connection
-              end
-              spec = ActiveRecord::Base::ConnectionSpecification.new self.connection_spec, adapter_method
-              WithConnection::ConnectionPool.new "sync cassandra", spec
-            end
-        end
-        def sync_connection_pool
-          self.class.sync_connection_pool
+        def self.new_async_connection(servers=nil)
+          new_connection true, servers
         end
 
+        def self.new_sync_connection(servers=nil)
+          new_connection false, servers
+        end
+
+        def self.new_async_connection_pool(servers=nil)
+          adapter_method = Proc.new do
+            self.new_async_connection servers
+          end
+          spec = ActiveRecord::Base::ConnectionSpecification.new self.connection_spec, adapter_method
+          WithConnection::ConnectionPool.new "async cassandra", spec
+        end
+
+        def self.new_sync_connection_pool(servers=nil)
+          adapter_method = Proc.new do
+            self.new_sync_connection servers
+          end
+          spec = ActiveRecord::Base::ConnectionSpecification.new self.connection_spec, adapter_method
+          WithConnection::ConnectionPool.new "sync cassandra", spec
+        end
+
+        @@ring = nil
         def self.ring
-          self.new_connection.ring
+          @@ring ||= self.new_sync_connection.ring
         end
 
         def self.servers_and_ranges(datacenter)
@@ -104,55 +75,35 @@ module CassandraObject
           end
         end
 
-        @@ranged_connection_pool_key_algo = nil
         def self.ranged_connection_pool_key_algo
-          @@ranged_connection_pool_key_algo ||= Proc.new { |key| Digest::MD5.hexdigest key.to_s }
+          Proc.new { |key| Digest::MD5.hexdigest key.to_s }
         end
 
-        def self.create_ranged_connection_pool(async)
-          require 'with_connection/ranged_connection_pool'
+        def self.new_ranged_connection_pool(async)
+          if self.connection_spec[:datacenter]
+            require 'with_connection/ranged_connection_pool'
 
-          adapter_method = Proc.new do
-            async ? self.new_event_machine_connection : self.new_connection
-          end
+            default_pool = async ? new_async_connection_pool : new_sync_connection_pool
 
-          spec = ActiveRecord::Base::ConnectionSpecification.new self.connection_spec, adapter_method
-          default_pool = WithConnection::ConnectionPool.new "sync cassandra", spec
-
-          ranges_and_pools = self.servers_and_ranges(self.connection_spec[:datacenter]).map do |info|
-            conn_method = Proc.new do
-              async ? self.new_event_machine_connection(info[:servers]) : self.new_connection(info[:servers])
+            ranges_and_pools = self.servers_and_ranges(self.connection_spec[:datacenter]).map do |info|
+              pool = async ? new_async_connection_pool(info[:servers]) : new_sync_connection_pool(info[:servers])
+              [WithConnection::RangedConnectionPool::BasicRange.new(info[:start_token], info[:end_token]), pool]
             end
-            spec = ActiveRecord::Base::ConnectionSpecification.new self.connection_spec, conn_method
-            pool = WithConnection::ConnectionPool.new "sync cassandra", spec
-            [WithConnection::RangedConnectionPool::BasicRange.new(info[:start_token], info[:end_token]), pool]
-          end
 
-          ranges_and_pools.size <= 1 ? default_pool : WithConnection::RangedConnectionPool.new(ranges_and_pools, default_pool, self.ranged_connection_pool_key_algo)
-        end
-
-        @@sync_ranged_connection_pool = nil
-        @@async_ranged_connection_pool = nil
-        def self.sync_ranged_connection_pool
-          @@sync_ranged_connection_pool ||= create_ranged_connection_pool(false)
-        end
-
-        def self.async_ranged_connection_pool
-          @@async_ranged_connection_pool ||= create_ranged_connection_pool(true)
-        end
-
-        if defined?(EM)
-          def self.ranged_connection_pool
-            EM.reactor_running? ? self.async_ranged_connection_pool : self.sync_ranged_connection_pool
-          end
-        else
-          def self.ranged_connection_pool
-            self.sync_ranged_connection_pool
+            ranges_and_pools.size <= 1 ? default_pool : WithConnection::RangedConnectionPool.new(ranges_and_pools, default_pool, self.ranged_connection_pool_key_algo)
+          else
+            async ? new_async_connection_pool : new_sync_connection_pool
           end
         end
 
-        def ranged_connection_pool
-          self.class.ranged_connection_pool
+        @@sync_connection_pool = nil
+        def self.sync_connection_pool
+          @@sync_connection_pool ||= new_ranged_connection_pool(false)
+        end
+
+        @@async_connection_pool = nil
+        def self.async_connection_pool
+          @@async_connection_pool ||= new_ranged_connection_pool(true)
         end
 
         if defined?(EM)
@@ -169,17 +120,17 @@ module CassandraObject
           self.class.connection_pool
         end
 
-        def self.connection()
-          self.connection_spec[:datacenter] ? self.ranged_connection_pool.connection : self.connection_pool.connection
+        def self.connection
+          self.connection_pool.connection
         end
-        def self.connection?() !!connection end
+        def self.connection?; !!connection; end
 
-        def self.with_connection(key=nil, &block)
-          self.connection_spec[:datacenter] ? self.ranged_connection_pool.with_connection(key, &block) : self.connection_pool.with_connection(&block)
+        def self.with_connection(key=nil, read_write=nil, &block)
+          self.connection_pool.with_connection(key, read_write, &block)
         end
 
-        def with_connection(key=nil, &block)
-          self.class.with_connection(key, &block)
+        def with_connection(key=nil, read_write=nil, &block)
+          self.class.with_connection(key, read_write, &block)
         end
 
         def self.disconnect!

@@ -25,7 +25,7 @@ module CassandraObject
       while objects.size < number_to_find && !out_of_keys
         index_results = 
           begin
-            CassandraObject::Base.with_connection(@key) do
+            CassandraObject::Base.with_connection(@key, :read) do
               connection.get(@column_family, @key, @super_column,
                              count: limit,
                              start: start_with,

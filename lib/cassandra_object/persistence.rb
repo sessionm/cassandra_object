@@ -4,11 +4,11 @@ module CassandraObject
 
     module ClassMethods
       def add(key, value, *columns_and_options)
-        column_family, column, sub_column, options = CassandraObject::Base.with_connection { connection.extract_and_validate_params(self.column_family, key, columns_and_options, {}) }
+        column_family, column, sub_column, options = CassandraObject::Base.with_connection(key, :write) { connection.extract_and_validate_params(self.column_family, key, columns_and_options, {}) }
         # the options are removed, leaving just columns
         columns = columns_and_options
 
-        CassandraObject::Base.with_connection(key) do
+        CassandraObject::Base.with_connection(key, :write) do
           ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column, sub_column: sub_column, value: value) do
             connection.add(column_family, key, value, *columns, :consistency => thrift_write_consistency)
           end
@@ -28,7 +28,7 @@ module CassandraObject
         values.uniq!
         value_spec = values.length == 1 ? values[0] : '<various>'
 
-        CassandraObject::Base.with_connection(key) do
+        CassandraObject::Base.with_connection(key, :write) do
           ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column_spec, value: value_spec) do
             connection.add_multiple_columns(column_family, key, hash, :consistency => thrift_write_consistency)
           end
@@ -36,7 +36,7 @@ module CassandraObject
       end
 
       def remove(key)
-        CassandraObject::Base.with_connection(key) do
+        CassandraObject::Base.with_connection(key, :write) do
           ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
             connection.remove(column_family, key.to_s, consistency: thrift_write_consistency)
           end
@@ -46,7 +46,7 @@ module CassandraObject
       # remove_counter is not exposed by Cassandra gem.
       # TODO: move this to Cassandra gem.
       def remove_counter(key)
-        CassandraObject::Base.with_connection(key) do
+        CassandraObject::Base.with_connection(key, :write) do
           ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: column_family, key: key) do
             parent = CassandraThrift::ColumnParent.new(:column_family => column_family)
             connection.send(:client).remove_counter(key, parent, thrift_write_consistency)
@@ -55,7 +55,7 @@ module CassandraObject
       end
 
       def delete_all
-        CassandraObject::Base.with_connection do
+        CassandraObject::Base.with_connection(nil, :write) do
           ActiveSupport::Notifications.instrument("truncate.cassandra_object", column_family: column_family) do
             connection.truncate!(column_family)
           end
@@ -72,7 +72,7 @@ module CassandraObject
         key.tap do |key|
           unless attributes.blank?
             attributes = encode_columns_hash(attributes, schema_version)
-            CassandraObject::Base.with_connection(key) do
+            CassandraObject::Base.with_connection(key, :write) do
               ActiveSupport::Notifications.instrument("insert.cassandra_object", column_family: column_family, key: key, attributes: attributes) do
               
                 options = {}.tap do |options|
