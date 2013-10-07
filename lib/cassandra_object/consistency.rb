@@ -12,6 +12,7 @@ module CassandraObject
         :one    => Cassandra::Consistency::ONE,
         :quorum => Cassandra::Consistency::QUORUM,
         :local_quorum => Cassandra::Consistency::LOCAL_QUORUM,
+        :each_quorum => Cassandra::Consistency::EACH_QUORUM,
         :all    => Cassandra::Consistency::ALL
       }
       
