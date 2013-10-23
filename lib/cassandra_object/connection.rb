@@ -68,15 +68,29 @@ module CassandraObject
           datacenter = datacenter.to_s
           ring.map do |t| 
             {
-              :start_token => sprintf('%032x', t.start_token.to_i), 
-              :end_token => t.end_token.to_i == 0 ? ('f' * 32) : sprintf('%032x', t.end_token.to_i - 1), 
+              :start_token => t.start_token.to_i,
+              :end_token => t.end_token.to_i == 0 ? 0xffffffffffffffffffffffffffffffff : (t.end_token.to_i - 1), 
               :servers => t.endpoint_details.select { |d| d.datacenter == datacenter }.map { |d| "#{d.host}:9160" }
             }
           end
         end
 
+        NEGATIVE_TEST  = 0x80000000000000000000000000000000
+        FLIP_BITS_MASK = 0xffffffffffffffffffffffffffffffff
         def self.ranged_connection_pool_key_algo
-          Proc.new { |key| Digest::MD5.hexdigest key.to_s }
+          Proc.new do |key|
+            key = Digest::MD5.hexdigest(key.to_s).to_i(16)
+
+            # https://github.com/datastax/java-driver/blob/2.0/driver-core/src/main/java/com/datastax/driver/core/Token.java:259
+            # test to see if the unsigned integer is a negative singed value
+            if (key & NEGATIVE_TEST) != 0
+              # need to flip all the bits
+              # abs
+              (key ^ FLIP_BITS_MASK) + 1
+            else
+              key
+            end
+          end
         end
 
         def self.new_ranged_connection_pool(async)
