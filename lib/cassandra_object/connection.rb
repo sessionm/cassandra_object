@@ -15,8 +15,8 @@ module CassandraObject
 
           if async
             require 'thrift_client/event_machine'
-            spec[:thrift].merge!(:transport => Thrift::EventMachineTransport,
-                                 :transport_wrapper => nil)
+            spec[:thrift] = spec[:thrift].dup.merge(:transport => Thrift::EventMachineTransport,
+                                                    :transport_wrapper => nil)
           end
 
           Cassandra.new(spec[:keyspace], servers || spec[:servers], spec[:thrift]).tap do |conn|
