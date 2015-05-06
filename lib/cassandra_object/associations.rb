@@ -14,6 +14,7 @@ module CassandraObject
     included do
       class_attribute :associations
       self.associations = {}
+      class_attribute :pluralize_table_names, :instance_writer => false
     end
 
     module ClassMethods
@@ -27,6 +28,18 @@ module CassandraObject
 
       def column_family_configuration
         super << {:Name=>relationships_column_family, :CompareWith=>"UTF8Type", :CompareSubcolumnsWith=>"TimeUUIDType", :ColumnType=>"Super"}
+      end
+
+      def dangerous_attribute_method?(name)
+        false
+      end
+
+      def generated_association_methods
+        @generated_association_methods ||= begin
+          mod = const_set(:GeneratedAssociationMethods, Module.new)
+          include mod
+          mod
+        end
       end
 
       def association(association_name, options= {})

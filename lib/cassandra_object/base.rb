@@ -46,7 +46,7 @@ module CassandraObject
     include Timestamps
     include NestedAttributes
 
-    attr_accessor :key, :schema_version
+    attr_accessor :key, :schema_version, :association_cache
 
     include Serialization
     include Migrations
@@ -59,6 +59,7 @@ module CassandraObject
       @readonly = false
       @attributes = {}.with_indifferent_access
       self.attributes = attributes
+      @association_cache = {}
       @schema_version = self.class.current_schema_version
     end
 
