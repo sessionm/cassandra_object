@@ -1,4 +1,6 @@
-source "http://rubygems.org"
-gemspec
+source 'http://gems.prod.sessionm.com'
 
-gem "mocha", :require => false
+gem 'rails', :require => 'rails/all'
+
+gem 'simple_uuid', '0.2.2'
+gem 'cassandra-driver', :require => 'cassandra'

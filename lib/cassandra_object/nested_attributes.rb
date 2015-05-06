@@ -11,7 +11,7 @@ module CassandraObject
     extend ActiveSupport::Concern
 
     included do
-      class_inheritable_accessor :nested_attributes_options, :instance_writer => false
+      class_attribute :nested_attributes_options
       self.nested_attributes_options = {}
     end
 
@@ -28,6 +28,7 @@ module CassandraObject
           if reflection = reflect_on_association(association_name)
             reflection.options[:autosave] = true
             add_autosave_association_callbacks(reflection)
+            self.nested_attributes_options = self.nested_attributes_options.dup
             nested_attributes_options[association_name.to_sym] = options
             type = (reflection.collection? ? :collection : :one_to_one)
 

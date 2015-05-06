@@ -6,11 +6,11 @@ class CassandraObject::ConsistencyTest < CassandraObject::TestCase
 
   test 'thrift_write_consistency' do
     TestModel.write_consistency = :all
-    assert_equal Cassandra::Consistency::ALL, TestModel.thrift_write_consistency
+    assert_equal :all, TestModel.thrift_write_consistency
   end
   
   test 'thrift_read_consistency' do
     TestModel.read_consistency = :all
-    assert_equal Cassandra::Consistency::ALL, TestModel.thrift_read_consistency
+    assert_equal :all, TestModel.thrift_read_consistency
   end
 end

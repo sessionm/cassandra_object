@@ -9,11 +9,11 @@ module CassandraObject
 
     module ClassMethods
       THRIFT_LEVELS = {
-        :one    => Cassandra::Consistency::ONE,
-        :quorum => Cassandra::Consistency::QUORUM,
-        :local_quorum => Cassandra::Consistency::LOCAL_QUORUM,
-        :each_quorum => Cassandra::Consistency::EACH_QUORUM,
-        :all    => Cassandra::Consistency::ALL
+        :one    => :one,
+        :quorum => :quorum,
+        :local_quorum => :local_quorum,
+        :each_quorum => :each_quorum,
+        :all    => :all
       }
       
       DEFAULT_OPTIONS = {

@@ -46,7 +46,7 @@ module CassandraObject
     include Timestamps
     include NestedAttributes
 
-    attr_accessor :key
+    attr_accessor :key, :schema_version
 
     include Serialization
     include Migrations

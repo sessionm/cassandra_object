@@ -4,8 +4,9 @@ module CassandraObject
     extend ActiveSupport::Autoload
 
     included do
-      class_inheritable_array :migrations
-      class_inheritable_accessor :current_schema_version
+      class_attribute :migrations
+      self.migrations = []
+      class_attribute :current_schema_version
       self.current_schema_version = 0
     end
 
@@ -29,7 +30,8 @@ module CassandraObject
     
     module ClassMethods
       def migrate(version, &blk)
-        write_inheritable_array(:migrations, [Migration.new(version, blk)])
+        self.migrations = self.migrations.dup
+        self.migrations << Migration.new(version, blk)
         
         if version > self.current_schema_version 
           self.current_schema_version = version
@@ -60,8 +62,8 @@ module CassandraObject
         end
         
         super(key, attributes).tap do |record|
-          original_attributes.diff(attributes).keys.each do |attribute|
-            record.attribute_will_change! attribute
+          attributes.each do |name, _|
+            record.attribute_will_change!(name) unless original_attributes.has_key?(name)
           end
         end
       end

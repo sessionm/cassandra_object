@@ -27,6 +27,7 @@ module CassandraObject
           :column_type => 'Standard',
         }.merge(options)
 
+        # this won't work with cassandra-driver
         cf = Cassandra::ColumnFamily.new
         cf.name = name.to_s
         cf.keyspace = @keyspace.to_s

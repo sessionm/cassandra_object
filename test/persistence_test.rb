@@ -62,11 +62,11 @@ class CassandraObject::PersistenceTest < CassandraObject::TestCase
       CassandraObject::Consistency::ClassMethods.class_variable_set(:@@default_read_consistency, :quorum)
       Counter.write_consistency = nil
 
-      Counter.connection.expects(:add).with(Counter.column_family, 'key', 2, 'column', :consistency => Cassandra::Consistency::QUORUM)
+      Counter.connection.expects(:add).with(Counter.column_family, 'key', 2, 'column', :consistency => :quorum)
       Counter.add('key', 2, 'column')
 
       Counter.write_consistency = :local_quorum
-      Counter.connection.expects(:add).with(Counter.column_family, 'key', 2, 'column', :consistency => Cassandra::Consistency::LOCAL_QUORUM)
+      Counter.connection.expects(:add).with(Counter.column_family, 'key', 2, 'column', :consistency => :local_quorum)
       Counter.add('key', 2, 'column')
     ensure
       CassandraObject::Consistency::ClassMethods.class_variable_set(:@@default_read_consistency, old_class_write_cl)

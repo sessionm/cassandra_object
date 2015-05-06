@@ -1,0 +1,36 @@
+development: &id001
+  servers: ['127.0.0.1:9160']
+  keyspace: greyhound_development
+  replication:
+    strategy: org.apache.cassandra.locator.SimpleStrategy
+    factor: 1
+  consistency:
+    read_default: quorum
+    write_default: quorum
+  column_family_defaults:
+    compaction_strategy: org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy
+    row_cache_provider: org.apache.cassandra.cache.ConcurrentLinkedHashCacheProvider
+  thrift:
+    connect_timeout: 0.5
+    timeout: 3
+    retries: 2
+production: *id001
+test:
+  servers: ['127.0.0.1:9160']
+  keyspace: greyhound_test
+  replication:
+    strategy: org.apache.cassandra.locator.SimpleStrategy
+    factor: 1
+  consistency:
+    read_default: quorum
+    write_default: quorum
+  column_family_defaults:
+    compaction_strategy: org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy
+    row_cache_provider: org.apache.cassandra.cache.ConcurrentLinkedHashCacheProvider
+  thrift:
+    connect_timeout: 0.5
+    timeout: 3
+    retries: 2
+    exception_class_overrides:
+      - CassandraThrift::InvalidRequestException
+      - CassandraThrift::NotFoundException

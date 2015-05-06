@@ -75,19 +75,19 @@ module CassandraObject
       end
     end
 
-    def method_missing(method_id, *args, &block)
-      if !self.class.attribute_methods_generated?
-        self.class.define_attribute_methods
-        send(method_id, *args, &block)
-      else
-        super
-      end
-    end
+    # def method_missing(method_id, *args, &block)
+    #   if !self.class.attribute_methods_generated?
+    #     self.class.define_attribute_methods
+    #     send(method_id, *args, &block)
+    #   else
+    #     super
+    #   end
+    # end
 
-    def respond_to?(*args)
-      self.class.define_attribute_methods unless self.class.attribute_methods_generated?
-      super
-    end
+    # def respond_to?(*args)
+    #   self.class.define_attribute_methods unless self.class.attribute_methods_generated?
+    #   super
+    # end
 
     protected
       def attribute_method?(name)
