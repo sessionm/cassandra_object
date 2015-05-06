@@ -2,12 +2,12 @@
 
 Gem::Specification.new do |s|
   s.name = 'sessionm-cassandra_object'
-  s.version = '2.7.1'
+  s.version = '4.0.0'
   s.description = 'Cassandra ActiveModel'
   s.summary = 'Cassandra ActiveModel'
 
   s.authors = ["Michael Koziarski", "gotime", "sessionm"]
-  s.email = 'klange@sessionm.com'
+  s.email = 'doug@sessionm.com'
   s.homepage = 'http://github.com/sessionm/cassandra_object'
 
   s.extra_rdoc_files = ["README.markdown"]
