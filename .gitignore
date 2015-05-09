@@ -1,2 +1,10 @@
-Gemfile.lock
+.bundle
+tmp/
+!.gitignore
+*~
+\#*\#
+.\#*
+cms/
+.DS_Store
+.*.swp
 *.gem

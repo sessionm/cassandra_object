@@ -8,4 +8,4 @@ module CassandraObject
       require 'cassandra_object/generators/migration_generator'
     end
   end
-end
+end if defined?(Rails)

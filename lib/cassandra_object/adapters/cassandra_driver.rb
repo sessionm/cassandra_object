@@ -12,7 +12,11 @@ module CassandraObject
       end
 
       def client
-        @client ||= Client.new(cluster.connect(config[:keyspace]))
+        @client ||= self.new_client
+      end
+
+      def new_client
+        Client.new(cluster.connect(config[:keyspace]))
       end
 
       def close
@@ -26,7 +30,7 @@ module CassandraObject
           :port => config[:port] || 9042,
           :connect_timeout => config[:thrift][:connect_timeout] || 10,
           :timeout => config[:thrift][:timeout] || 10,
-          :logger => Rails.logger || Logger.new(STDOUT),
+          :logger => config[:logger] || (defined?(Rails) && Rails.logger) || Logger.new(STDOUT),
           :consistency => (config[:consistency] || {})[:write_default].try(:to_sym) || :one,
         }
       end
