@@ -28,6 +28,15 @@ CREATE TABLE "Issues" (
   PRIMARY KEY (key, column1)
 )
 CQL
+
+    session.execute <<-CQL
+CREATE TABLE "Counters" (
+  key blob,
+  column1 text,
+  value counter,
+  PRIMARY KEY (key, column1)
+)
+CQL
     session.close
   end
 
