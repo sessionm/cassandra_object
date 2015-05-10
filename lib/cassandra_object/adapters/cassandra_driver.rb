@@ -16,7 +16,7 @@ module CassandraObject
       end
 
       def new_client
-        Client.new(cluster.connect(config[:keyspace]))
+        Client.new(cluster.connect(config[:keyspace]), cluster)
       end
 
       def close
@@ -37,14 +37,15 @@ module CassandraObject
 
       # The client class acts like the old cassandra gem
       class Client
-        attr_reader :session
+        attr_reader :session, :cluster
 
         KEY_FIELD = 'key'
         NAME_FIELD = 'column1'
         VALUE_FIELD = 'value'
 
-        def initialize(session)
+        def initialize(session, cluster)
           @session = session
+          @cluster = cluster
         end
 
         def close
@@ -110,6 +111,40 @@ module CassandraObject
           async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
         end
 
+        def remove(column_family, key, *args)
+          opts = args.pop if args.last.is_a?(Hash)
+          async = opts.try(:[], :async)
+          key = "textAsBlob('#{key}')"
+
+          query =
+            if args.first.nil? || args.first.is_a?(Hash)
+              "DELETE FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{key};"
+            else
+              "DELETE \"#{column_family}\" WHERE #{KEY_FIELD} = #{key} AND #{NAME_FIELD} = '#{args.first}';"
+            end
+
+          async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
+        end
+
+        def get_range(column_family, opts={}, &blk)
+          key_count = opts[:key_count] || 100
+          query = "SELECT #{KEY_FIELD} FROM \"#{column_family}\" LIMIT #{key_count}"
+          keys = self.execute(query, execute_options(opts)).map { |result| result[KEY_FIELD] }
+          keys.size > 0 ? multi_get(column_family, keys) : {}
+        end
+
+        def multi_get(column_family, keys, *args)
+          opts = args.pop if args.last.is_a?(Hash)
+          keys = keys.map { |key| "textAsBlob('#{key}')" }.join(',')
+          results = {}
+          query = "SELECT * FROM \"#{column_family}\" WHERE #{KEY_FIELD} IN(#{keys})"
+          self.execute(query, execute_options(opts)).each do |row|
+            results[row[KEY_FIELD]] ||= {}
+            results[row[KEY_FIELD]][row[NAME_FIELD]] = row[VALUE_FIELD]
+          end
+          results
+        end
+
         def execute_options(opts)
           opts.try(:slice,
                    :consistency,
@@ -118,6 +153,10 @@ module CassandraObject
                    :timeout,
                    :serial_consistency
                   ) || {}
+        end
+
+        def has_table?(name)
+          self.cluster.keyspace(session.keyspace).has_table? name
         end
       end
     end

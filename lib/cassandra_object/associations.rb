@@ -52,16 +52,19 @@ module CassandraObject
       end
       
       def remove(key)
-        begin
-          CassandraObject::Base.with_connection(key, :write) do
-            ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: relationships_column_family, key: key) do
-              connection.remove(relationships_column_family, key.to_s, consistency: thrift_write_consistency)
+        if connection.has_table?(relationships_column_family)
+          begin
+            CassandraObject::Base.with_connection(key, :write) do
+              ActiveSupport::Notifications.instrument("remove.cassandra_object", column_family: relationships_column_family, key: key) do
+                connection.remove(relationships_column_family, key.to_s, consistency: thrift_write_consistency)
+              end
             end
+          rescue Cassandra::Errors::InvalidError => e
+            # pretty sure this is not the correct message for cassandra-driver gem, will need to investigate the actual message
+            raise e unless e.message =~ /unconfigured columnfamily/i
           end
-        rescue Cassandra::Error => e
-          # pretty sure this is not the correct message for cassandra-driver gem, will need to investigate the actual message
-          raise e unless e.message =~ /invalid column family/i
         end
+
         super
       end
     end
