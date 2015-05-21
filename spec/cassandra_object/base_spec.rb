@@ -27,4 +27,10 @@ describe CassandraObject::Base do
     issue3 = Issue.create! :description => 'button is disabled', :worth => 0.2
     expect(Issue.find_with_ids(issue1.id, issue2.id).map(&:id).sort).to eq [issue1.id, issue2.id].sort
   end
+
+  it "should be able to get all issues" do
+    issue1 = Issue.create! :description => 'web site not working', :worth => 1.5
+    issue2 = Issue.create! :description => 'button is disabled', :worth => 0.2
+    expect(Issue.find_with_ids([issue1.id, issue2.id]).map(&:id).sort).to eq [issue1.id, issue2.id].sort
+  end
 end

@@ -69,6 +69,8 @@ module CassandraObject
       @attributes[name.to_s]
     end
 
+    alias _read_attribute read_attribute
+
     def attributes=(attributes)
       attributes.each do |(name, value)|
         send("#{name}=", value)

@@ -23,12 +23,15 @@ module CassandraObject
         klass
       end
 
-      delegate :compute_type, :to => 'ActiveRecord::Base'
+      def compute_type(*args)
+        ActiveRecord::Base.send :compute_type, *args
+      end
     end
 
     extend ActiveModel::Naming
     include ActiveModel::Conversion
     extend ActiveSupport::DescendantsTracker
+    extend ActiveRecord::Delegation::DelegateCache
 
     include Configuration
     include Connection
@@ -45,6 +48,7 @@ module CassandraObject
     include FinderMethods
     include Timestamps
     include NestedAttributes
+    include Arel
 
     attr_accessor :key, :schema_version, :association_cache
 

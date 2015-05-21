@@ -6,8 +6,6 @@ require File.expand_path('../../config/environment', __FILE__)
 
 Bundler.require :default, :test
 
-Dir[BASE_DIR.join("spec/support/**/*.rb")].each { |f| require f }
-
 KEYSPACE = 'cassandra_object_test'
 
 CassandraObject::Adapters::CassandraDriver.new(CassandraObject::Base.connection_spec).cluster.tap do |cluster|
@@ -42,6 +40,13 @@ CQL
 
   cluster.close
 end
+
+ActiveRecord::Base.configurations = YAML.load_file('config/database.yml')
+ActiveRecord::Base.establish_connection ENV["RAILS_ENV"]
+ActiveRecord::Base.logger = Logger.new(STDOUT)
+ActiveRecord::Migrator.migrate('spec/support/db/migrate')
+
+Dir[BASE_DIR.join("spec/support/**/*.rb")].each { |f| require f }
 
 RSpec.configure do |config|
 

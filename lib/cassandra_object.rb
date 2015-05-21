@@ -28,6 +28,7 @@ module CassandraObject
   autoload :RowTTL
   autoload :NestedAttributes
   autoload :Adapters
+  autoload :Arel
 
   module Tasks
     extend ActiveSupport::Autoload

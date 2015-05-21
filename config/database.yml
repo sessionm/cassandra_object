@@ -1,0 +1,6 @@
+test:
+  encoding: utf8
+  adapter: mysql2
+  database: cassandra_object_test
+  username: root
+  host: localhost
