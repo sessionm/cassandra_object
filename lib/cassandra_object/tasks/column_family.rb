@@ -28,7 +28,7 @@ module CassandraObject
         }.merge(options)
 
         # this won't work with cassandra-driver
-        cf = Cassandra::ColumnFamily.new
+        cf = CassandraObject::Schema::ColumnFamily.new
         cf.name = name.to_s
         cf.keyspace = @keyspace.to_s
         options.each do |option, value|
@@ -83,15 +83,3 @@ module CassandraObject
   end
 
 end
-
-class Cassandra
-  class ColumnFamily
-    def with_fields(options)
-      struct_fields.collect { |f| f[1][:name] }.each do |f|
-        send("#{f}=", options[f.to_sym] || options[f.to_s])
-      end
-      self
-    end
-  end
-end
-

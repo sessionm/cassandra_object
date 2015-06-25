@@ -42,17 +42,18 @@ module CassandraObject
         self.connection_spec = spec
       end
 
+      @@connection = nil
       def connection
-        @connection ||= CassandraObject::Adapters::CassandraDriver.new(self.connection_spec).client
+        @@connection ||= CassandraObject::Adapters::CassandraDriver.new(self.connection_spec).client
       end
 
       def connection?
-        !! @connection
+        !! @@connection
       end
 
       def disconnect!
-        @connection.try(:close)
-        @connection = nil
+        @@connection.try(:close)
+        @@connection = nil
       end
 
       def with_connection(*args)

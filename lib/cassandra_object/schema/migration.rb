@@ -102,5 +102,16 @@ module CassandraObject
       end
 
     end
+
+    class ColumnFamily < Struct.new(:name,
+                                    :keyspace,
+                                    :comparator_type,
+                                    :column_type,
+                                    :compaction_strategy,
+                                    :row_cache_provider,
+                                    :default_validation_class,
+                                    :subcomparator_type
+                                   )
+    end
   end
 end

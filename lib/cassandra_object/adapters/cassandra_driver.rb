@@ -163,6 +163,10 @@ module CassandraObject
                   ) || {}
         end
 
+        def keyspace
+          session.keyspace
+        end
+
         def has_table?(name)
           self.cluster.keyspace(session.keyspace).has_table? name
         end
@@ -173,6 +177,30 @@ module CassandraObject
 
         def column_families
           @column_families ||= self.cluster.keyspace(session.keyspace).tables.inject({}) { |hsh, table| hsh[table.name] = table; hsh }
+        end
+
+        def schema(reload=false)
+          if reload
+            remove_instance_variable(:@schema_cache) if instance_variable_defined?(:@schema_cache)
+            remove_instance_variable(:@column_families) if instance_variable_defined?(:@column_families)
+          end
+        end
+
+        def add_column_family(column_family)
+          value_type = column_family.column_type == 'Standard' ? 'text' : 'counter'
+
+          query = <<-CQL
+CREATE TABLE "#{column_family.name}" (
+  key blob,
+  column1 text,
+  value #{value_type},
+  PRIMARY KEY (key, column1)
+)
+CQL
+
+          self.execute(query)
+
+          self.column_families[column_family.name.to_s] = column_family
         end
       end
     end
