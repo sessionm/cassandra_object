@@ -48,22 +48,47 @@ module CassandraObject
         end
       end
 
-      def all(options = {})
-        limit = options[:limit] || 100
-        results = CassandraObject::Base.with_connection(nil, :read) do
-          ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: limit) do
-            connection.get_range(column_family, key_count: limit, consistency: thrift_read_consistency)
+      def all(options={})
+        CassandraObject::Relation.new(self, self.arel_table, options)
+      end
+
+      def first(options=nil)
+        result = CassandraObject::Base.with_connection(nil, :read) do
+          ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: 1) do
+            connection.get_range(column_family, key_count: 1, consistency: thrift_read_consistency)
+          end
+        end.first
+
+        result ? instantiate(result[0], result[1]) : nil
+      end
+
+      def find_by_sql(arel, bind_values)
+        if bind_values.size == 0
+          limit = 100
+          results = CassandraObject::Base.with_connection(nil, :read) do
+            ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: limit) do
+              connection.get_range(column_family, key_count: limit, consistency: thrift_read_consistency)
+            end
+          end
+
+          return results.map do |k, v|
+            v.empty? ? nil : instantiate(k, v)
+          end.compact
+        elsif bind_values.size == 1
+          if bind_values[0][0] == 'id' && bind_values[0][1].is_a?(String)
+            return [find_by_id(bind_values[0][1])]
+          elsif bind_values[0][:id]
+            return [find_by_id(bind_values[0][:id])]
           end
         end
 
-        results.map do |k, v|
-          v.empty? ? nil : instantiate(k, v)
-        end.compact
+        raise "only supports lookups by id currently bind_values #{bind_values}"
       end
 
-      def first(options = {})
-        all(options.merge(:limit => 1)).first
+      def unscoped
+        CassandraObject::Relation.new(self, self.arel_table, {})
       end
+      alias current_scope unscoped
 
       def find_with_ids(*ids)
         expects_array = ids.first.kind_of?(Array)

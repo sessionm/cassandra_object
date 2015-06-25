@@ -3,7 +3,7 @@ source "http://rubygems.org"
 gem 'activesupport', :require => 'active_support/all'
 gem 'activerecord', :require => 'active_record'
 
-gem 'simple_uuid', '0.2.2'
+gem 'simple_uuid'
 gem 'cassandra-driver', :require => 'cassandra'
 gem 'mysql2'
 

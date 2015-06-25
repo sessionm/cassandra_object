@@ -10,10 +10,12 @@ module CassandraObject
       def column_family=(column_family)
         @column_family = column_family
       end
+      alias table_name= column_family=
 
       def column_family
         @column_family || name.pluralize
       end
+      alias table_name column_family
 
       def base_class
         klass = self
@@ -25,6 +27,14 @@ module CassandraObject
 
       def compute_type(*args)
         ActiveRecord::Base.send :compute_type, *args
+      end
+
+      def primary_key
+        'id'
+      end
+
+      def columns_hash
+        connection.schema_cache.columns_hash table_name
       end
     end
 

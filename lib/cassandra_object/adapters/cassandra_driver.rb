@@ -35,8 +35,14 @@ module CassandraObject
         }
       end
 
+      class SchemaCache < ActiveRecord::ConnectionAdapters::SchemaCache
+        def columns_hash(table_name)
+          @columns_hash[table_name] ||= {'id' => 'id'}
+        end
+      end
+
       # The client class acts like the old cassandra gem
-      class Client
+      class Client < ActiveRecord::ConnectionAdapters::AbstractAdapter
         attr_reader :session, :cluster
 
         KEY_FIELD = 'key'
@@ -157,6 +163,10 @@ module CassandraObject
 
         def has_table?(name)
           self.cluster.keyspace(session.keyspace).has_table? name
+        end
+
+        def schema_cache
+          @schema_cache ||= SchemaCache.new(self)
         end
       end
     end
