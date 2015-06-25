@@ -170,6 +170,10 @@ module CassandraObject
         def schema_cache
           @schema_cache ||= SchemaCache.new(self)
         end
+
+        def column_families
+          @column_families ||= self.cluster.keyspace(session.keyspace).tables.inject({}) { |hsh, table| hsh[table.name] = table; hsh }
+        end
       end
     end
   end
