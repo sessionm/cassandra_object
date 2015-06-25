@@ -108,13 +108,15 @@ module CassandraObject
           end
         end
 
-        def add(column_family, key, by, field, opts=nil)
+        def add(column_family, key, by, fields, opts=nil)
           async = opts.try(:[], :async)
+          fields = [fields] unless fields.is_a?(Array)
           key = "textAsBlob('#{key}')"
 
-          query = "UPDATE \"#{column_family}\" SET #{VALUE_FIELD} = #{VALUE_FIELD} + #{by} WHERE #{KEY_FIELD} = #{key} AND #{NAME_FIELD} = '#{field}';"
-
-          async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
+          fields.each do |field|
+            query = "UPDATE \"#{column_family}\" SET #{VALUE_FIELD} = #{VALUE_FIELD} + #{by} WHERE #{KEY_FIELD} = #{key} AND #{NAME_FIELD} = '#{field}';"
+            async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
+          end
         end
 
         def remove(column_family, key, *args)

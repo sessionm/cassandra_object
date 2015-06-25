@@ -3,14 +3,10 @@ module CassandraObject
     extend ActiveSupport::Concern
 
     module ClassMethods
-      def add(key, value, *columns_and_options)
-        column_family, column, sub_column, options = CassandraObject::Base.with_connection(key, :write) { connection.extract_and_validate_params(self.column_family, key, columns_and_options, {}) }
-        # the options are removed, leaving just columns
-        columns = columns_and_options
-
+      def add(key, value, *columns)
         CassandraObject::Base.with_connection(key, :write) do
-          ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: column, sub_column: sub_column, value: value) do
-            connection.add(column_family, key, value, *columns, :consistency => thrift_write_consistency)
+          ActiveSupport::Notifications.instrument("add.cassandra_object", column_family: column_family, key: key, column: columns, value: value) do
+            connection.add(column_family, key, value, columns, :consistency => thrift_write_consistency)
           end
         end
       end
