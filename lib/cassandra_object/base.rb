@@ -36,6 +36,14 @@ module CassandraObject
       def columns_hash
         connection.schema_cache.columns_hash table_name
       end
+
+      def logger
+        ActiveRecord::Base.logger
+      end
+    end
+
+    def logger
+      self.class.logger
     end
 
     extend ActiveModel::Naming
