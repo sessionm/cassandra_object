@@ -179,6 +179,10 @@ module CassandraObject
           @column_families ||= self.cluster.keyspace(session.keyspace).tables.inject({}) { |hsh, table| hsh[table.name] = table; hsh }
         end
 
+        def batch
+          yield
+        end
+
         def schema(reload=false)
           if reload
             remove_instance_variable(:@schema_cache) if instance_variable_defined?(:@schema_cache)
