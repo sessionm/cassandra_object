@@ -120,9 +120,10 @@ module CassandraObject
           result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
           return result if async
 
-          result
-            .inject({}) { |hsh, row| hsh[row[NAME_FIELD]] = row[VALUE_FIELD]; hsh }
-            .slice(*columns.map(&:to_s))
+          data = result
+                 .inject({}) { |hsh, row| hsh[row[NAME_FIELD]] = row[VALUE_FIELD]; hsh }
+
+          columns.map { |column| data[column.to_s] }
         end
 
         def add(column_family, key, by, fields, opts=nil)
