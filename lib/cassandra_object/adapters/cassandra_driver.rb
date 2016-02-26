@@ -184,7 +184,7 @@ module CassandraObject
           query << " LIMIT #{count}"
 
           self.execute(query, execute_options(opts)).inject({}) do |results, row|
-            results[decode(row[NAME_FIELD], opts[:name_type])] = decode(row[VALUE_FIELD], opts[:value_type])
+            results[decode(row[NAME_FIELD], name_type(column_family))] = decode(row[VALUE_FIELD], value_type(column_family))
             results
           end
         end
