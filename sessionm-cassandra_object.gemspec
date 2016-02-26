@@ -2,11 +2,11 @@
 
 Gem::Specification.new do |s|
   s.name = 'sessionm-cassandra_object'
-  s.version = '4.0.10'
+  s.version = '4.0.11'
   s.description = 'Cassandra ActiveModel'
   s.summary = 'Cassandra ActiveModel'
 
-  s.authors = ["Michael Koziarski", "gotime", "sessionm"]
+  s.authors = ["Doug Youch", "sessionm"]
   s.email = 'doug@sessionm.com'
   s.homepage = 'http://github.com/sessionm/cassandra_object'
 

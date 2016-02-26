@@ -171,6 +171,24 @@ module CassandraObject
           results
         end
 
+        def get_slice(column_family, key, column, start, finish, count, reversed, consistency, opts={})
+          opts[:consistency] = consistency
+
+          key = "textAsBlob('#{key}')"
+
+          query = "SELECT * FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{key}"
+          query << " AND #{NAME_FIELD} = #{escape(column, opts[:name_type])}" if column
+          query << " AND #{NAME_FIELD} >= #{escape(start, opts[:name_type])}" unless start.empty?
+          query << " AND #{NAME_FIELD} <= #{escape(finish, opts[:name_type])}" unless finish.empty?
+          query << " ORDER BY #{NAME_FIELD} #{opts[:reverse_comparator] ? 'ASC' : 'DESC'}" if reversed
+          query << " LIMIT #{count}"
+
+          self.execute(query, execute_options(opts)).inject({}) do |results, row|
+            results[decode(row[NAME_FIELD], opts[:name_type])] = decode(row[VALUE_FIELD], opts[:value_type])
+            results
+          end
+        end
+
         def execute_options(opts)
           opts.try(:slice,
                    :consistency,
@@ -233,6 +251,15 @@ CQL
             convert_str_to_hex str
           else
             "'#{str}'"
+          end
+        end
+
+        def decode(val, type)
+          case type
+          when :timeuuid
+            SimpleUUID::UUID.new(val.to_s).to_s # binary version
+          else
+            val
           end
         end
 
