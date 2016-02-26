@@ -75,7 +75,7 @@ module CassandraObject
 
           query = "BEGIN BATCH\n"
           query << values.map do |name, value|
-            "  INSERT INTO \"#{column_family}\" (#{KEY_FIELD}, #{NAME_FIELD}, #{VALUE_FIELD}) VALUES (#{key}, '#{name}', '#{value}')#{insert_into_options}"
+            "  INSERT INTO \"#{column_family}\" (#{KEY_FIELD}, #{NAME_FIELD}, #{VALUE_FIELD}) VALUES (#{key}, #{escape(name, opts.try(:[], :name_type))}, #{escape(value, opts.try(:[], :value_type))})#{insert_into_options}"
           end.join("\n")
           query << "\nAPPLY BATCH;"
 
@@ -223,6 +223,27 @@ CQL
           self.execute(query)
 
           self.column_families[column_family.name.to_s] = column_family
+        end
+
+        def escape(str, type)
+          case type
+          when :timeuuid
+            convert_str_to_timeuuid str
+          when :blob
+            convert_str_to_hex str
+          else
+            "'#{str}'"
+          end
+        end
+
+        # when the column names are timeuuid
+        def convert_str_to_timeuuid(str)
+          SimpleUUID::UUID.new(str).to_guid
+        end
+
+        # insert a blob
+        def convert_str_to_hex(str)
+          '0x' << str.unpack('H*').first
         end
       end
     end
