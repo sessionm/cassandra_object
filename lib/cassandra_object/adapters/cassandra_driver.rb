@@ -75,7 +75,7 @@ module CassandraObject
 
           query = "BEGIN BATCH\n"
           query << values.map do |name, value|
-            "  INSERT INTO \"#{column_family}\" (#{KEY_FIELD}, #{NAME_FIELD}, #{VALUE_FIELD}) VALUES (#{key}, #{escape(name, opts.try(:[], :name_type))}, #{escape(value, opts.try(:[], :value_type))})#{insert_into_options}"
+            "  INSERT INTO \"#{column_family}\" (#{KEY_FIELD}, #{NAME_FIELD}, #{VALUE_FIELD}) VALUES (#{key}, #{escape(name, name_type(column_family))}, #{escape(value, value_type(column_family))})#{insert_into_options}"
           end.join("\n")
           query << "\nAPPLY BATCH;"
 
@@ -177,10 +177,10 @@ module CassandraObject
           key = "textAsBlob('#{key}')"
 
           query = "SELECT * FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{key}"
-          query << " AND #{NAME_FIELD} = #{escape(column, opts[:name_type])}" if column
-          query << " AND #{NAME_FIELD} >= #{escape(start, opts[:name_type])}" unless start.empty?
-          query << " AND #{NAME_FIELD} <= #{escape(finish, opts[:name_type])}" unless finish.empty?
-          query << " ORDER BY #{NAME_FIELD} #{opts[:reverse_comparator] ? 'ASC' : 'DESC'}" if reversed
+          query << " AND #{NAME_FIELD} = #{escape(column, name_type(column_family))}" if column
+          query << " AND #{NAME_FIELD} >= #{escape(start, name_type(column_family))}" unless start.empty?
+          query << " AND #{NAME_FIELD} <= #{escape(finish, name_type(column_family))}" unless finish.empty?
+          query << " ORDER BY #{NAME_FIELD} #{reverse_comparator(column_family) ? 'ASC' : 'DESC'}" if reversed
           query << " LIMIT #{count}"
 
           self.execute(query, execute_options(opts)).inject({}) do |results, row|
@@ -241,6 +241,18 @@ CQL
           self.execute(query)
 
           self.column_families[column_family.name.to_s] = column_family
+        end
+
+        def name_type(column_family)
+          self.cluster.keyspace(keyspace).table(column_family).column(NAME_FIELD).type.kind
+        end
+
+        def value_type(column_family)
+          self.cluster.keyspace(keyspace).table(column_family).column(VALUE_FIELD).type.kind
+        end
+
+        def reverse_comparator(column_family)
+          self.cluster.keyspace(keyspace).table(column_family).send(:clustering_order).first == :desc
         end
 
         def escape(str, type)
