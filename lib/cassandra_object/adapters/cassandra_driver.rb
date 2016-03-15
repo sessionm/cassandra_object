@@ -227,7 +227,7 @@ module CassandraObject
         end
 
         def add_column_family(column_family)
-          value_type = column_family.column_type == 'Standard' ? 'text' : 'counter'
+          value_type = column_family.default_validation_class == 'CounterColumnType' ? 'counter' : 'text'
 
           query = <<-CQL
 CREATE TABLE "#{column_family.name}" (
@@ -235,7 +235,21 @@ CREATE TABLE "#{column_family.name}" (
   column1 text,
   value #{value_type},
   PRIMARY KEY (key, column1)
-)
+) WITH COMPACT STORAGE
+  AND CLUSTERING ORDER BY (column1 ASC)
+  AND bloom_filter_fp_chance = 0.1
+  AND caching = '{"keys":"ALL", "rows_per_partition":"NONE"}'
+  AND comment = ''
+  AND compaction = {'sstable_size_in_mb': '160', 'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'}
+  AND compression = {'sstable_compression': 'org.apache.cassandra.io.compress.SnappyCompressor'}
+  AND dclocal_read_repair_chance = 0.1
+  AND default_time_to_live = 0
+  AND gc_grace_seconds = 864000
+  AND max_index_interval = 2048
+  AND memtable_flush_period_in_ms = 0
+  AND min_index_interval = 128
+  AND read_repair_chance = 0.0
+  AND speculative_retry = 'NONE';
 CQL
 
           self.execute(query)
