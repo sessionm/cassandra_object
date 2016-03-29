@@ -66,7 +66,12 @@ module CassandraObject
     end
 
     def read_attribute(name)
-      @attributes[name.to_s]
+      name = name.to_s
+      if name == 'id'
+        id
+      else
+        @attributes[name]
+      end
     end
 
     alias _read_attribute read_attribute

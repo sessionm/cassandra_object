@@ -16,5 +16,14 @@ describe CassandraObject::Associations do
       expect(role.user.id).to eq user.id
       expect(user.issue.id).to eq issue.id
     end
+
+    it "should set the foreign key attribute when assigned through the belongs_to relationship" do
+      issue = Issue.create! :description => 'web site not working', :worth => 1.5
+      user = User.create! :position => 1, :issue => issue
+      expect(user.issue_id).to eq issue.id
+
+      user.issue = issue
+      expect(user.issue_id).to eq issue.id
+    end
   end
 end
