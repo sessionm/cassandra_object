@@ -126,6 +126,14 @@ module CassandraObject
           columns.map { |column| data[column.to_s] }
         end
 
+        def get_columns_as_hash(column_family, key, columns, opts)
+          get column_family, key, columns, opts
+        end
+
+        def get_value(column_family, key, column, consistency)
+          get column_family, key, [column], :consistency => consistency
+        end
+
         def add(column_family, key, by, fields, opts=nil)
           async = opts.try(:[], :async)
           fields = [fields] unless fields.is_a?(Array)
