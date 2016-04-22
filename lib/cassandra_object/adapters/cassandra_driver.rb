@@ -127,7 +127,19 @@ module CassandraObject
         end
 
         def get_columns_as_hash(column_family, key, columns, opts)
-          get column_family, key, columns, opts
+          async = opts.try(:[], :async)
+
+          key = "textAsBlob('#{key}')"
+
+          name_fields = columns.map { |c| "'#{c}'" }.join(', ')
+
+          query = "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{NAME_FIELD} IN(#{name_fields}) AND #{KEY_FIELD} = #{key}"
+
+          result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
+          return result if async
+
+          result
+            .inject({}) { |hsh, row| hsh[row[NAME_FIELD]] = row[VALUE_FIELD]; hsh }
         end
 
         def get_value(column_family, key, column, consistency)
