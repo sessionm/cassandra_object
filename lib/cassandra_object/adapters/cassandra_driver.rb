@@ -1,6 +1,17 @@
 module CassandraObject
   module Adapters
     class CassandraDriver
+      CLUSTER_CONFIG_OPTIONS = [
+        :credentials, :auth_provider, :compression, :hosts, :logger, :port,
+        :load_balancing_policy, :reconnection_policy, :retry_policy, :listeners,
+        :consistency, :trace, :page_size, :compressor, :username, :password,
+        :ssl, :server_cert, :client_cert, :private_key, :passphrase,
+        :connect_timeout, :futures_factory, :datacenter, :address_resolution,
+        :address_resolution_policy, :idle_timeout, :heartbeat_interval, :timeout,
+        :synchronize_schema, :schema_refresh_delay, :schema_refresh_timeout,
+        :shuffle_replicas, :client_timestamps
+      ]
+
       attr_reader :config
 
       def initialize(config)
@@ -25,14 +36,17 @@ module CassandraObject
       end
 
       def cluster_config
-        {
+        config.slice(*CLUSTER_CONFIG_OPTIONS).reverse_merge(
           :hosts => config[:servers].map { |server| server.sub /:\d+/, '' },
-          :port => config[:port] || 9042,
-          :connect_timeout => config[:thrift][:connect_timeout] || 10,
-          :timeout => config[:thrift][:timeout] || 10,
-          :logger => config[:logger] || (defined?(Rails) && Rails.logger) || Logger.new(STDOUT),
+          :port => 9042,
+          :connect_timeout => config[:thrift].try(:[], :connect_timeout) || 10,
+          :timeout => config[:thrift].try(:[], :timeout) || 10,
+          :logger => (defined?(Rails) && Rails.logger) || Logger.new(STDOUT),
+          :heartbeat_interval => nil,
+          :idle_timeout => nil
+        ).merge(
           :consistency => (config[:consistency] || {})[:write_default].try(:to_sym) || :one,
-        }
+        )
       end
 
       class SchemaCache < ActiveRecord::ConnectionAdapters::SchemaCache
