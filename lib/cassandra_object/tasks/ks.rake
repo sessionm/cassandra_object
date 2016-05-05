@@ -1,6 +1,8 @@
 namespace :ks do
   task :configure => :environment do
     @configs = YAML::load(ERB.new(IO.read(Rails.root.join('config', 'cassandra.yml'))).result)
+    # use default thrift settings
+    @configs.each { |_, section| section.delete 'thrift' }
     @config = @configs[Rails.env || 'development']
   end
 
