@@ -41,7 +41,7 @@ module CassandraObject
           :port => 9042,
           :connect_timeout => config[:thrift].try(:[], :connect_timeout) || 10,
           :timeout => config[:thrift].try(:[], :timeout) || 10,
-          :logger => :logger => config[:logger] || (defined?(Rails) && Rails.logger) || Logger.new(STDOUT)
+          :logger => config[:logger] || (defined?(Rails) && Rails.logger) || Logger.new(STDOUT)
         ).merge(
           :consistency => (config[:consistency] || {})[:write_default].try(:to_sym) || :one,
         )
