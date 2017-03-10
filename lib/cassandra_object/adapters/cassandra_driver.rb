@@ -43,7 +43,7 @@ module CassandraObject
           :timeout => config[:thrift].try(:[], :timeout) || 10,
           :logger => config[:logger] || (defined?(Rails) && Rails.logger) || Logger.new(STDOUT)
         ).merge(
-          :consistency => (config[:consistency] || {})[:write_default].try(:to_sym) || :one,
+          :consistency => (config[:consistency] || {})[:write_default].try(:to_sym) || :one
         )
       end
 
@@ -83,11 +83,10 @@ module CassandraObject
           async = opts.try(:[], :async)
 
           insert_into_options = ttl ? " USING TTL #{ttl}" : ''
-          key = "textAsBlob('#{key}')"
 
           query = "BEGIN BATCH\n"
           query << values.map do |name, value|
-            "  INSERT INTO \"#{column_family}\" (#{KEY_FIELD}, #{NAME_FIELD}, #{VALUE_FIELD}) VALUES (#{key}, #{escape(name, name_type(column_family))}, #{escape(value, value_type(column_family))})#{insert_into_options}"
+            "  INSERT INTO \"#{column_family}\" (#{KEY_FIELD}, #{NAME_FIELD}, #{VALUE_FIELD}) VALUES (#{escape(key, key_type(column_family))}, #{escape(name, name_type(column_family))}, #{escape(value, value_type(column_family))})#{insert_into_options}"
           end.join("\n")
           query << "\nAPPLY BATCH;"
 
@@ -100,13 +99,11 @@ module CassandraObject
 
           columns = columns_options.flatten.compact
 
-          key = "textAsBlob('#{key}')"
-
           query =
             if columns.size == 1
-              "SELECT #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{key} AND #{NAME_FIELD} = '#{columns.first}'"
+              "SELECT #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))} AND #{NAME_FIELD} = #{escape(columns.first, name_type(column_family))}"
             else
-              "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{key}"
+              "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))}"
             end
 
           result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
@@ -123,11 +120,9 @@ module CassandraObject
         def get_columns(column_family, key, columns, opts)
           async = opts.try(:[], :async)
 
-          key = "textAsBlob('#{key}')"
+          name_fields = columns.map { |c| escape(c, name_type(column_family)) }.join(', ')
 
-          name_fields = columns.map { |c| "'#{c}'" }.join(', ')
-
-          query = "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{NAME_FIELD} IN(#{name_fields}) AND #{KEY_FIELD} = #{key}"
+          query = "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{NAME_FIELD} IN(#{name_fields}) AND #{KEY_FIELD} = #{escape(key, key_type(column_family))}"
 
           result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
           return result if async
@@ -141,11 +136,9 @@ module CassandraObject
         def get_columns_as_hash(column_family, key, columns, opts)
           async = opts.try(:[], :async)
 
-          key = "textAsBlob('#{key}')"
-
           name_fields = columns.map { |c| "'#{c}'" }.join(', ')
 
-          query = "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{NAME_FIELD} IN(#{name_fields}) AND #{KEY_FIELD} = #{key}"
+          query = "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{NAME_FIELD} IN(#{name_fields}) AND #{KEY_FIELD} = #{escape(key, key_type(column_family))}"
 
           result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
           return result if async
@@ -161,10 +154,9 @@ module CassandraObject
         def add(column_family, key, by, fields, opts=nil)
           async = opts.try(:[], :async)
           fields = [fields] unless fields.is_a?(Array)
-          key = "textAsBlob('#{key}')"
 
           fields.each do |field|
-            query = "UPDATE \"#{column_family}\" SET #{VALUE_FIELD} = #{VALUE_FIELD} + #{by} WHERE #{KEY_FIELD} = #{key} AND #{NAME_FIELD} = '#{field}';"
+            query = "UPDATE \"#{column_family}\" SET #{VALUE_FIELD} = #{VALUE_FIELD} + #{by} WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))} AND #{NAME_FIELD} = #{escape(field, name_type(column_family))};"
             async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
           end
         end
@@ -172,13 +164,12 @@ module CassandraObject
         def remove(column_family, key, *args)
           opts = args.pop if args.last.is_a?(Hash)
           async = opts.try(:[], :async)
-          key = "textAsBlob('#{key}')"
 
           query =
             if args.first.nil? || args.first.is_a?(Hash)
-              "DELETE FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{key};"
+              "DELETE FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))};"
             else
-              "DELETE \"#{column_family}\" WHERE #{KEY_FIELD} = #{key} AND #{NAME_FIELD} = '#{args.first}';"
+              "DELETE \"#{column_family}\" WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))} AND #{NAME_FIELD} = #{escape(args.first, name_type(column_family))};"
             end
 
           async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
@@ -193,7 +184,7 @@ module CassandraObject
 
         def multi_get(column_family, keys, *args)
           opts = args.pop if args.last.is_a?(Hash)
-          keys = keys.map { |key| "textAsBlob('#{key}')" }.join(',')
+          keys = keys.map { |key| escape(key, key_type(column_family)) }.join(',')
           results = {}
           query = "SELECT * FROM \"#{column_family}\" WHERE #{KEY_FIELD} IN(#{keys})"
           self.execute(query, execute_options(opts)).each do |row|
@@ -206,9 +197,7 @@ module CassandraObject
         def get_slice(column_family, key, column, start, finish, count, reversed, consistency, opts={})
           opts[:consistency] = consistency
 
-          key = "textAsBlob('#{key}')"
-
-          query = "SELECT * FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{key}"
+          query = "SELECT * FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))}"
           query << " AND #{NAME_FIELD} = #{escape(column, name_type(column_family))}" if column
           query << " AND #{NAME_FIELD} >= #{escape(start, name_type(column_family))}" unless start.empty?
           query << " AND #{NAME_FIELD} <= #{escape(finish, name_type(column_family))}" unless finish.empty?
@@ -287,6 +276,10 @@ CQL
           self.execute(query)
 
           self.column_families[column_family.name.to_s] = column_family
+        end
+
+        def key_type(column_family)
+          self.cluster.keyspace(keyspace).table(column_family).column(KEY_FIELD).type.kind
         end
 
         def name_type(column_family)
