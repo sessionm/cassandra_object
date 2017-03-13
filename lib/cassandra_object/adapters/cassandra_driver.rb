@@ -36,6 +36,17 @@ module CassandraObject
       end
 
       def cluster_config
+        {
+          :hosts => config[:servers].map { |server| server.sub /:\d+/, '' },
+          :port => config[:port] || 9042,
+          :connect_timeout => config[:thrift][:connect_timeout] || 10,
+          :timeout => config[:thrift][:timeout] || 10,
+          :logger => config[:logger] || (defined?(Rails) && Rails.logger) || Logger.new(STDOUT),
+          :consistency => (config[:consistency] || {})[:write_default].try(:to_sym) || :one,
+        }
+      end
+  
+      def cluster_config_new
         config.slice(*CLUSTER_CONFIG_OPTIONS).reverse_merge(
           :hosts => config[:servers].map { |server| server.sub /:\d+/, '' },
           :port => 9042,
