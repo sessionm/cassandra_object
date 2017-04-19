@@ -81,12 +81,16 @@ module CassandraObject
           session.close
         end
 
-        def execute(*args)
-          session.execute *args
+        def execute(query, options={})
+          ActiveSupport::Notifications.instrument('query.cassandra', query: query, options: options, async: false) do
+            session.execute query, options
+          end
         end
 
-        def execute_async(*args)
-          session.execute_async *args
+        def execute_async(query, options={})
+          ActiveSupport::Notifications.instrument('query.cassandra', query: query, options: options, async: true) do
+            session.execute_async query, options
+          end
         end
 
         def insert(column_family, key, values, opts=nil)
