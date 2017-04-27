@@ -176,6 +176,16 @@ module CassandraObject
           end
         end
 
+        def add_multiple_columns(column_family, key, hash, opts=nil)
+          async = opts.try(:[], :async)
+          fields = [fields] unless fields.is_a?(Array)
+
+          hash.each do |field, by|
+            query = "UPDATE \"#{column_family}\" SET #{VALUE_FIELD} = #{VALUE_FIELD} + #{by} WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))} AND #{NAME_FIELD} = #{escape(field, name_type(column_family))};"
+            async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
+          end
+        end
+
         def remove(column_family, key, *args)
           opts = args.pop if args.last.is_a?(Hash)
           async = opts.try(:[], :async)
