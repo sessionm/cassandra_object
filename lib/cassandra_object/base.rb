@@ -80,8 +80,8 @@ module CassandraObject
       @destroyed = false
       @readonly = false
       @attributes = {}.with_indifferent_access
-      self.attributes = attributes
       @association_cache = {}
+      self.attributes = attributes
       @schema_version = self.class.current_schema_version
     end
 
