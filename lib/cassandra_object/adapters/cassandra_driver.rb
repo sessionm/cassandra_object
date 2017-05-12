@@ -301,6 +301,7 @@ CQL
           self.execute(query)
 
           self.column_families[column_family.name.to_s] = column_family
+          self.cluster.refresh_schema
         end
 
         def key_type(column_family)
