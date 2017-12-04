@@ -269,6 +269,7 @@ module CassandraObject
           if reload
             remove_instance_variable(:@schema_cache) if instance_variable_defined?(:@schema_cache)
             remove_instance_variable(:@column_families) if instance_variable_defined?(:@column_families)
+            self.cluster.refresh_schema
           end
         end
 
@@ -299,9 +300,7 @@ CREATE TABLE "#{column_family.name}" (
 CQL
 
           self.execute(query)
-
-          self.column_families[column_family.name.to_s] = column_family
-          self.cluster.refresh_schema
+          self.schema(true)
         end
 
         def key_type(column_family)
