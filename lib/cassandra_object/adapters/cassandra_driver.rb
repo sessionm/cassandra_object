@@ -99,13 +99,18 @@ module CassandraObject
 
           insert_into_options = ttl ? " USING TTL #{ttl}" : ''
 
-          query = "BEGIN BATCH\n"
-          query << values.map do |name, value|
-            "  INSERT INTO \"#{column_family}\" (#{KEY_FIELD}, #{NAME_FIELD}, #{VALUE_FIELD}) VALUES (#{escape(key, key_type(column_family))}, #{escape(name, name_type(column_family))}, #{escape(value, value_type(column_family))})#{insert_into_options}"
+          insert_query = values.map do |name, value|
+              "  INSERT INTO \"#{column_family}\" (#{KEY_FIELD}, #{NAME_FIELD}, #{VALUE_FIELD}) VALUES (#{escape(key, key_type(column_family))}, #{escape(name, name_type(column_family))}, #{escape(value, value_type(column_family))})#{insert_into_options}"
           end.join("\n")
-          query << "\nAPPLY BATCH;"
 
-          async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
+          if batch_mode?
+            @batched_queries << insert_query
+          else
+            query = "BEGIN BATCH\n"
+            query << insert_query
+            query << "\nAPPLY BATCH;"
+            async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
+          end
         end
 
         def get(column_family, key, *columns_options)
@@ -261,8 +266,28 @@ module CassandraObject
           @column_families ||= self.cluster.keyspace(session.keyspace).tables.inject({}) { |hsh, table| hsh[table.name] = table; hsh }
         end
 
-        def batch
-          yield
+        def batch_mode?
+          !! @batched_queries
+        end
+
+        def batch(opts=false)
+          if @batched_queries
+            yield
+          else
+            begin
+              async = opts.try(:[], :async)
+              @batched_queries ||= []
+              yield
+              query = "BEGIN BATCH\n"
+              query << @batched_queries.join("\n")
+              query << "\nAPPLY BATCH;"
+              async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
+            rescue Exception => e
+              raise e
+            ensure
+              @batched_queries = nil
+            end
+          end
         end
 
         def schema(reload=false)
