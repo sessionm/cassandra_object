@@ -1,5 +1,4 @@
-
-class Cassandra
+module Cassandra
   # A temporally-ordered Long class for use in Cassandra column names
   class Long < CustomComparable
 

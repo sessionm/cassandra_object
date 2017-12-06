@@ -1,5 +1,4 @@
-
-class Cassandra
+module Cassandra
   # Abstract base class for comparable numeric column name types
   class CustomComparable
     class TypeError < ::TypeError #:nodoc:

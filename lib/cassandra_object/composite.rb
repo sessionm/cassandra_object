@@ -1,4 +1,4 @@
-class Cassandra
+module Cassandra
   class Composite
     include ::Comparable
     attr_reader :parts
