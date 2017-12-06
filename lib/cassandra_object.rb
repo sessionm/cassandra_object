@@ -54,4 +54,7 @@ module CassandraObject
   end
 end
 
+require 'cassandra_object/custom_comparable'
+require 'cassandra_object/composite'
+require 'cassandra_object/long'
 require 'cassandra_object/railtie'
