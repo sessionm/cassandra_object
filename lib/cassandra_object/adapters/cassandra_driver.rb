@@ -99,8 +99,13 @@ module CassandraObject
 
           insert_into_options = ttl ? " USING TTL #{ttl}" : ''
 
+          key_fields = get_key_fields(column_family)
+          column_fields = get_column_fields(column_family)
+
+          key_parts = get_parts(column_family, key, key_fields)
           insert_query = values.map do |name, value|
-              "  INSERT INTO \"#{column_family}\" (#{KEY_FIELD}, #{NAME_FIELD}, #{VALUE_FIELD}) VALUES (#{escape(key, key_type(column_family))}, #{escape(name, name_type(column_family))}, #{escape(value, value_type(column_family))})#{insert_into_options}"
+            column_parts = get_parts(column_family, name, column_fields)
+            "  INSERT INTO \"#{column_family}\" (#{key_fields.map(&:first).join(', ')}, #{column_fields.map(&:first).join(', ')}, #{VALUE_FIELD}) VALUES (#{key_parts.map { |f, v| escape(v, get_type(column_family, f)) }.join(', ')}, #{column_parts.map { |f, v| escape(v, get_type(column_family, f)) }.join(', ')}, #{escape(value, value_type(column_family))})#{insert_into_options}"
           end.join("\n")
 
           if batch_mode?
@@ -118,12 +123,13 @@ module CassandraObject
           async = opts.try(:[], :async)
 
           columns = columns_options.flatten.compact
+          column_fields = get_column_fields(column_family)
 
           query =
             if columns.size == 1
-              "SELECT #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))} AND #{NAME_FIELD} = #{escape(columns.first, name_type(column_family))}"
+              "SELECT #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{key_clause(column_family, key)} AND #{column_clause(column_family, columns.first)}"
             else
-              "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))}"
+              "SELECT #{column_fields.map(&:first).join(', ')}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{key_clause(column_family, key)}"
             end
 
           result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
@@ -132,7 +138,7 @@ module CassandraObject
           if columns.size == 1
             result.size > 0 ? result.first[VALUE_FIELD] : nil
           else
-            data = result.inject({}) { |hsh, row| hsh[row[NAME_FIELD]] = row[VALUE_FIELD]; hsh }
+            data = result.inject({}) { |hsh, row| hsh[column_string(row, column_fields)] = row[VALUE_FIELD]; hsh }
             columns.size > 0 ? data.slice(*columns.map(&:to_s)) : data
           end
         end
@@ -142,7 +148,7 @@ module CassandraObject
 
           name_fields = columns.map { |c| escape(c, name_type(column_family)) }.join(', ')
 
-          query = "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{NAME_FIELD} IN(#{name_fields}) AND #{KEY_FIELD} = #{escape(key, key_type(column_family))}"
+          query = "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{NAME_FIELD} IN(#{name_fields}) AND #{key_clause(column_family, key)};"
 
           result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
           return result if async
@@ -158,7 +164,7 @@ module CassandraObject
 
           name_fields = columns.map { |c| "'#{c}'" }.join(', ')
 
-          query = "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{NAME_FIELD} IN(#{name_fields}) AND #{KEY_FIELD} = #{escape(key, key_type(column_family))}"
+          query = "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{NAME_FIELD} IN(#{name_fields}) AND #{key_clause(column_family, key)};"
 
           result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
           return result if async
@@ -176,7 +182,7 @@ module CassandraObject
           fields = [fields] unless fields.is_a?(Array)
 
           fields.each do |field|
-            query = "UPDATE \"#{column_family}\" SET #{VALUE_FIELD} = #{VALUE_FIELD} + #{by} WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))} AND #{NAME_FIELD} = #{escape(field, name_type(column_family))};"
+            query = "UPDATE \"#{column_family}\" SET #{VALUE_FIELD} = #{VALUE_FIELD} + #{by} WHERE #{key_clause(column_family, key)} AND #{column_clause(column_family, field)};"
             async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
           end
         end
@@ -186,7 +192,7 @@ module CassandraObject
           fields = [fields] unless fields.is_a?(Array)
 
           hash.each do |field, by|
-            query = "UPDATE \"#{column_family}\" SET #{VALUE_FIELD} = #{VALUE_FIELD} + #{by} WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))} AND #{NAME_FIELD} = #{escape(field, name_type(column_family))};"
+            query = "UPDATE \"#{column_family}\" SET #{VALUE_FIELD} = #{VALUE_FIELD} + #{by} WHERE #{key_clause(column_family, key)} AND #{column_clause(column_family, field)};"
             async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
           end
         end
@@ -197,9 +203,9 @@ module CassandraObject
 
           query =
             if args.first.nil? || args.first.is_a?(Hash)
-              "DELETE FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))};"
+              "DELETE FROM \"#{column_family}\" WHERE #{key_clause(column_family, key)};"
             else
-              "DELETE \"#{column_family}\" WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))} AND #{NAME_FIELD} = #{escape(args.first, name_type(column_family))};"
+              "DELETE FROM \"#{column_family}\" WHERE #{key_clause(column_family, key)} AND #{column_clause(column_family, args.first)};"
             end
 
           async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
@@ -227,15 +233,21 @@ module CassandraObject
         def get_slice(column_family, key, column, start, finish, count, reversed, consistency, opts={})
           opts[:consistency] = consistency
 
-          query = "SELECT * FROM \"#{column_family}\" WHERE #{KEY_FIELD} = #{escape(key, key_type(column_family))}"
-          query << " AND #{NAME_FIELD} = #{escape(column, name_type(column_family))}" if column
-          query << " AND #{NAME_FIELD} >= #{escape(start, name_type(column_family))}" unless start.empty?
-          query << " AND #{NAME_FIELD} <= #{escape(finish, name_type(column_family))}" unless finish.empty?
-          query << " ORDER BY #{NAME_FIELD} #{reverse_comparator(column_family) ? 'ASC' : 'DESC'}" if reversed
+          column_fields = get_column_fields(column_family)
+
+          query = "SELECT #{column_fields.map(&:first).join(', ')}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{key_clause(column_family, key)}"
+          query << " AND #{column_clause(column_family, column)}" if column
+          query << " AND #{column_clause(column_family, start, '>=')}" unless start.empty?
+          query << " AND #{column_clause(column_family, finish, '<=')}" unless finish.empty?
+          if reversed
+            direction = reverse_comparator(column_family) ? 'ASC' : 'DESC'
+            query << " ORDER BY "
+            query << column_fields.map { |f, _| "#{f} #{direction}" }.join(', ')
+          end
           query << " LIMIT #{count}"
 
           self.execute(query, execute_options(opts)).inject({}) do |results, row|
-            results[decode(row[NAME_FIELD], name_type(column_family))] = decode(row[VALUE_FIELD], value_type(column_family))
+            results[column_string(row, column_fields)] = decode(row[VALUE_FIELD], value_type(column_family))
             results
           end
         end
@@ -329,19 +341,59 @@ CQL
         end
 
         def key_type(column_family)
-          self.cluster.keyspace(keyspace).table(column_family).column(KEY_FIELD).type.kind
+          get_type(column_family, KEY_FIELD)
         end
 
         def name_type(column_family)
-          self.cluster.keyspace(keyspace).table(column_family).column(NAME_FIELD).type.kind
+          get_type(column_family, NAME_FIELD)
         end
 
         def value_type(column_family)
-          self.cluster.keyspace(keyspace).table(column_family).column(VALUE_FIELD).type.kind
+          get_type(column_family, VALUE_FIELD)
+        end
+
+        def get_type(column_family, field)
+          cluster.keyspace(keyspace).table(column_family).column(field).type.kind
+        end
+
+        def get_key_fields(column_family)
+          cluster.keyspace(keyspace).table(column_family).columns.select { |c| c.name =~ /^key/ }.map { |c| [c.name, c.type.kind] }
+        end
+
+        def get_column_fields(column_family)
+          cluster.keyspace(keyspace).table(column_family).columns.select { |c| c.name =~ /^column/ }.map { |c| [c.name, c.type.kind] }
         end
 
         def reverse_comparator(column_family)
           self.cluster.keyspace(keyspace).table(column_family).send(:clustering_order).first == :desc
+        end
+
+        def get_parts(column_family, val, fields)
+          val =
+            if fields.size > 1
+              Cassandra::Composite.new_from_packed(val.dup).parts
+            else
+              [val]
+            end
+
+          fields.each_with_index.map { |(field, type), idx| [field, normalize_composite_key_part(val[idx], type), type] }
+        end
+
+        def key_clause(column_family, val)
+          clause(column_family, val, get_key_fields(column_family))
+        end
+
+        def column_clause(column_family, val, operator='=')
+          clause(column_family, val, get_column_fields(column_family), operator)
+        end
+
+        def clause(column_family, val, fields, operator='=')
+          if operator == '='
+            get_parts(column_family, val, fields).map { |field, val, type| "#{field} #{operator} #{escape(val, type)}" }.join(' AND ')
+          else
+            field, val, type = get_parts(column_family, val, fields).first
+            "#{field} #{operator} #{escape(val, type)}"
+          end
         end
 
         def escape(str, type)
@@ -350,8 +402,23 @@ CQL
             convert_str_to_timeuuid str
           when :blob
             convert_str_to_hex str
+          when :int, :bigint
+            str
           else
             "'#{str}'"
+          end
+        end
+
+        def normalize_composite_key_part(val, type)
+          case type
+          when :timeuuid
+            SimpleUUID::UUID.new(val).to_s
+          when :int
+            val.unpack('N').first
+          when :bigint
+            Cassandra::Long.new(val).to_i
+          else
+            val
           end
         end
 
@@ -372,6 +439,15 @@ CQL
         # insert a blob
         def convert_str_to_hex(str)
           '0x' << str.unpack('H*').first
+        end
+
+        def column_string(row, fields)
+          if fields.size > 1
+            parts = fields.map { |f, t| decode(row[f], t) }
+            Cassandra::Composite.new(*parts).to_s
+          else
+            row[NAME_FIELD]
+          end
         end
       end
     end
