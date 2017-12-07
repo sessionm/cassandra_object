@@ -211,6 +211,14 @@ module CassandraObject
           async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
         end
 
+        def count_range(column_family, options = {})
+          get_range_keys(column_family, options).length
+        end
+
+        def get_range_keys(column_family, options = {})
+          get_range(column_family,options.merge!(:count => 1)).keys
+        end
+
         def get_range(column_family, opts={}, &blk)
           key_count = opts[:key_count] || 100
           query = "SELECT #{KEY_FIELD} FROM \"#{column_family}\" LIMIT #{key_count}"
