@@ -453,6 +453,8 @@ CQL
           if fields.size > 1
             parts = fields.map { |f, t| decode(row[f], t) }
             Cassandra::Composite.new(*parts).to_s
+          elsif row[NAME_FIELD].is_a?(::Cassandra::Uuid)
+            row[NAME_FIELD].to_s
           else
             row[NAME_FIELD]
           end
