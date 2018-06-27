@@ -5,8 +5,8 @@ test:
     strategy: org.apache.cassandra.locator.SimpleStrategy
     replication_factor: 1
   consistency:
-    read_default: quorum
-    write_default: quorum
+    read_default: local-quorum
+    write_default: local-quorum
   column_family_defaults:
     compaction_strategy: org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy
     row_cache_provider: org.apache.cassandra.cache.ConcurrentLinkedHashCacheProvider
