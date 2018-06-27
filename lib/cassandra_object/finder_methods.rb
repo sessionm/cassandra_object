@@ -52,13 +52,25 @@ module CassandraObject
         CassandraObject::Relation.new(self, self.arel_table, options)
       end
 
+      def last(options=nil)
+        result = CassandraObject::Base.with_connection(nil, :read) do
+          ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: 100) do
+            connection.get_range(column_family, key_count: 100, consistency: thrift_read_consistency)
+          end
+        end
+
+        result = result.flatten.last(2) if result.count > 0
+        result ? instantiate(result[0], result[1]) : nil
+      end
+
       def first(options=nil)
         result = CassandraObject::Base.with_connection(nil, :read) do
           ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: 1) do
             connection.get_range(column_family, key_count: 1, consistency: thrift_read_consistency)
           end
-        end.first
+        end
 
+        result = result.flatten.first(2) if result.count > 0
         result ? instantiate(result[0], result[1]) : nil
       end
 
