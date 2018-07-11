@@ -176,15 +176,16 @@ module CassandraObject
         def get_columns_as_hash(column_family, key, columns, opts)
           async = opts.try(:[], :async)
 
-          name_fields = columns.map { |c| "'#{c}'" }.join(', ')
-
-          query = "SELECT #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{NAME_FIELD} IN(#{name_fields}) AND #{key_clause(column_family, key)};"
+          query = "SELECT writetime(#{VALUE_FIELD}), #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{column_clause(column_family, columns)} AND #{key_clause(column_family, key)};"
 
           result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
           return result if async
 
-          result
-            .inject({}) { |hsh, row| hsh[row[NAME_FIELD]] = row[VALUE_FIELD]; hsh }
+          #result
+          #  .inject({}) { |hsh, row| hsh[row[NAME_FIELD]] = row[VALUE_FIELD]; hsh }
+          data = ::CassandraObject::OrderedHash.new
+          result.rows.each {|row| data.[]= Cassandra::Composite.new(*columns), row[VALUE_FIELD], row["writetime(#{VALUE_FIELD})"] }
+          data
         end
 
         def get_value(column_family, key, column, consistency)
