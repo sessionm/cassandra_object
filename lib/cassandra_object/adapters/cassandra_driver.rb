@@ -175,8 +175,11 @@ module CassandraObject
 
         def get_columns_as_hash(column_family, key, columns, opts)
           async = opts.try(:[], :async)
+          col_fields = get_column_fields(column_family)
+          cols = columns.count == 1 ? columns.first : columns if columns.is_a? Array
+          cols ||= columns
 
-          query = "SELECT writetime(#{VALUE_FIELD}), #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{column_clause(column_family, columns)} AND #{key_clause(column_family, key)};"
+          query = "SELECT writetime(#{VALUE_FIELD}), #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{column_clause(column_family, cols)} AND #{key_clause(column_family, key)};"
 
           result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
           return result if async
@@ -184,7 +187,11 @@ module CassandraObject
           #result
           #  .inject({}) { |hsh, row| hsh[row[NAME_FIELD]] = row[VALUE_FIELD]; hsh }
           data = ::CassandraObject::OrderedHash.new
-          result.rows.each {|row| data.[]= Cassandra::Composite.new(*columns), row[VALUE_FIELD], row["writetime(#{VALUE_FIELD})"] }
+          if col_fields.count == 1
+            result.rows.each {|row| data.[]= cols, row[VALUE_FIELD], row["writetime(#{VALUE_FIELD})"] }
+          else
+            result.rows.each {|row| data.[]= Cassandra::Composite.new(cols), row[VALUE_FIELD], row["writetime(#{VALUE_FIELD})"] }
+          end
           data
         end
 
