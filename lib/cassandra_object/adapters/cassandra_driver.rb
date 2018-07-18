@@ -101,6 +101,15 @@ module CassandraObject
           ol.count > 0 ? "USING #{ol.join(' AND ')}" : nil
         end
 
+        def exists?(column_family, key, *columns_options)
+          opts = columns_options.pop if columns_options.last.is_a?(Hash)
+
+          columns = columns_options.flatten.compact || []
+
+          result = get( column_family, key, columns, opts)
+          ![{}, nil].include?(result)
+        end
+
         def insert(column_family, key, values, opts=nil)
           async = opts.try(:[], :async)
           insert_into_options = cqlsh_options(opts)
