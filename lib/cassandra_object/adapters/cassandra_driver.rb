@@ -182,6 +182,8 @@ module CassandraObject
           columns.map { |column| data[column.to_s] }
         end
 
+
+
         def get_columns_as_hash(column_family, key, columns, opts)
           async = opts.try(:[], :async)
           col_fields = get_column_fields(column_family)
@@ -556,7 +558,7 @@ CQL
           when :int, :bigint
             str
           else
-            "'#{str}'"
+            "'#{str.gsub(/'/, {"'"=>"''"})}'"
           end
         end
 
@@ -578,6 +580,8 @@ CQL
           case type
           when :timeuuid
             SimpleUUID::UUID.new(val.to_s).to_s # binary version
+          when :int, :float, :bigint
+            val.to_s
           else
             val
           end
