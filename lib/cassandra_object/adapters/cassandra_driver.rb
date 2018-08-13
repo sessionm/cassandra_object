@@ -557,8 +557,10 @@ CQL
             convert_str_to_hex str
           when :int, :bigint
             str
-          else
+          when :string
             "'#{str.gsub(/'/, {"'"=>"''"})}'"
+          else
+            "'#{str}'"
           end
         end
 
