@@ -190,7 +190,17 @@ module CassandraObject
           cols = columns.count == 1 ? columns.first : columns if columns.is_a? Array
           cols ||= columns
 
-          query = "SELECT writetime(#{VALUE_FIELD}), #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{column_clause(column_family, cols)} AND #{key_clause(column_family, key)};"
+          if col_fields.count == 1  # single column field, but one or more column values
+            field_list = cols.is_a?(Array) ? "'#{cols.join("','")}'" : "'#{cols}'"
+            col_list = col_fields.map{|c| c[0]}.join(",")
+            where_clause = " #{col_list} in (#{field_list}) "
+          else # multiple column fields, multiple column values
+            where_clause = " #{column_clause(column_family, cols)} "
+          end
+
+
+          #query = "SELECT writetime(#{VALUE_FIELD}), #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{column_clause(column_family, cols)} AND #{key_clause(column_family, key)};"
+          query = "SELECT writetime(#{VALUE_FIELD}), #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{where_clause} AND #{key_clause(column_family, key)};"
 
           result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
           return result if async
@@ -199,7 +209,7 @@ module CassandraObject
           #  .inject({}) { |hsh, row| hsh[row[NAME_FIELD]] = row[VALUE_FIELD]; hsh }
           data = ::CassandraObject::OrderedHash.new
           if col_fields.count == 1
-            result.rows.each {|row| data.[]= cols, row[VALUE_FIELD], row["writetime(#{VALUE_FIELD})"] }
+            result.rows.each {|row| data.[]= row[NAME_FIELD], row[VALUE_FIELD], row["writetime(#{VALUE_FIELD})"] }
           else
             result.rows.each {|row| data.[]= Cassandra::Composite.new(cols), row[VALUE_FIELD], row["writetime(#{VALUE_FIELD})"] }
           end
@@ -543,8 +553,8 @@ CQL
           case type
           when :timeuuid
             # in CQL, we need to use the maxTimeuuid and minTimeuud functions
-            # also need to adjust endpoint by 1 second down for max and 1 second up for min because
-            # these are not exact matches on the endpoints (UUID varies) but the endpoint is capture in the 1 sec resolution
+            # also ... need to adjust endpoint by 1 second down for max and 1 second up for min because
+            # these are not exact matches on the endpoints (UUID varies), however SimpleUUID endpoints have 1 sec resolution
             case operator
             when '>'
               "maxTimeuuid('#{SimpleUUID::UUID.new(str).to_time-1}')"  # we have to adjust by 1 sec, endpoint not exact
@@ -558,9 +568,24 @@ CQL
           when :int, :bigint
             str
           when :string, :varchar
-            "'#{str.gsub(/'/, {"'"=>"''"})}'"
+            "'#{string_esc_quote(str)}'"
           else
             "'#{str}'"
+          end
+        end
+
+        def string_esc_quote(arg)
+          case arg
+          when String
+            arg.gsub(/'/, {"'"=>"''"})
+          when Array
+            arg.map {|m| string_esc_quote(m)}
+          when Hash, ActiveSupport::HashWithIndifferentAccess
+            new_hash = arg.class.new
+            arg.each {|k,v| new_hash[k] = string_esc_quote(v)}
+            new_hash
+          else
+            arg
           end
         end
 
