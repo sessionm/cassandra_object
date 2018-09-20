@@ -198,8 +198,6 @@ module CassandraObject
             where_clause = " #{column_clause(column_family, cols)} "
           end
 
-
-          #query = "SELECT writetime(#{VALUE_FIELD}), #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{column_clause(column_family, cols)} AND #{key_clause(column_family, key)};"
           query = "SELECT writetime(#{VALUE_FIELD}), #{NAME_FIELD}, #{VALUE_FIELD} FROM \"#{column_family}\" WHERE #{where_clause} AND #{key_clause(column_family, key)};"
 
           result = async ? self.execute_async(query, execute_options(opts)) : self.execute(query, execute_options(opts))
@@ -289,6 +287,25 @@ module CassandraObject
           self.execute(query, execute_options(opts)).each do |row|
             results[row[KEY_FIELD]] ||= {}
             results[row[KEY_FIELD]][row[NAME_FIELD]] = row[VALUE_FIELD]
+          end
+          results
+        end
+
+        def multi_get_columns(column_family, key_vals, cols, *args)
+          opts = args.pop if args.last.is_a?(Hash)
+          keys =  key_vals.map {|k| escape(k, key_type(column_family)) }.join(',')
+          column_fields = get_column_fields(column_family)
+          results = CassandraObject::OrderedHash.new
+
+          query = "SELECT writetime(#{VALUE_FIELD}), #{VALUE_FIELD}, key, #{column_fields.map(&:first).join(',')} FROM \"#{column_family}\" WHERE #{KEY_FIELD} IN(#{keys})"
+          self.execute(query, execute_options(opts)).each do |row|
+            if !column_fields.map(&:first).select{ |col| cols.include?(row[col])}.empty?
+              if results[row['key']]
+                results[row['key']] << decode(row[VALUE_FIELD], value_type(column_family))
+              else
+                results.[]= row['key'], [decode(row[VALUE_FIELD], value_type(column_family))]
+              end
+            end
           end
           results
         end
