@@ -172,7 +172,7 @@ module CassandraObject
           data
         end
 
-        def get_columns(column_family, key, columns, opts)
+        def get_columns(column_family, key, columns, opts=nil)
           async = opts.try(:[], :async)
 
           name_fields = columns.map { |c| escape(c, name_type(column_family)) }.join(', ')
@@ -190,7 +190,7 @@ module CassandraObject
 
 
 
-        def get_columns_as_hash(column_family, key, columns, opts)
+        def get_columns_as_hash(column_family, key, columns, opts=nil)
           async = opts.try(:[], :async)
           col_fields = get_column_fields(column_family)
           cols = columns.count == 1 ? columns.first : columns if columns.is_a? Array
