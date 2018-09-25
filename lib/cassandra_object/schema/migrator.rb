@@ -50,7 +50,7 @@ module CassandraObject
 
       def self.get_all_versions
         cas = CassandraObject::Base.connection
-        cas.get(schema_migrations_column_family, 'all').map {|(name, _value)| name.to_i}.sort
+        cas.multi_get(schema_migrations_column_family, ['all'])['all'].map {|(name, _value)| name.to_i}.sort
       end
 
       def self.current_version
