@@ -2,22 +2,6 @@ module CassandraObject
   module FinderMethods
     extend ActiveSupport::Concern
     module ClassMethods
-      def column_parent
-        @column_parent ||= CassandraThrift::ColumnParent.new(:column_family => column_family)
-      end
-
-      def slice_range_count
-        @slice_range_count ||= 100
-      end
-
-      def slice_range_count=(v)
-        @slice_range_count = v
-      end
-
-      def slice_predicate
-        @slice_predicate ||= CassandraThrift::SlicePredicate.new(:slice_range => CassandraThrift::SliceRange.new(:count => slice_range_count, :reversed => false, :start => '', :finish => ''))
-      end
-
       def find(key, opts={})
         # kludge to play nice ActiveRecord association
         opts.assert_valid_keys(:conditions, :consistency)
@@ -29,7 +13,7 @@ module CassandraObject
           begin
             CassandraObject::Base.with_connection(key, :read) do
               ActiveSupport::Notifications.instrument("get.cassandra_object", column_family: column_family, key: key) do
-                connection.get column_parent, key, slice_predicate, opts.slice(:consistency)
+                connection.get column_family, key, opts.slice(:consistency)
               end
             end
           end
@@ -131,12 +115,24 @@ module CassandraObject
         #raise RecordNotFound, "Couldn't find #{record_klass.name} without an ID" if ids.empty?
 
         results = multi_get(ids).values.compact
-
         results.size <= 1 && !expects_array ? results.first : results
       end
 
       def find_all_by_expression(expression, options={})
         multi_get_by_expression(expression, options).values
+      end
+
+      # Selecting a slice of a super column
+      def get_slice(key, start, finish, opts={})
+        CassandraObject::Base.with_connection(key, :read) do
+          connection.get_slice(column_family,
+                               key, 
+                               start,
+                               finish,
+                               opts[:count] || 100,
+                               opts[:reversed] || false,
+                               opts[:consistency] || thrift_read_consistency)
+        end
       end
 
       private
@@ -151,7 +147,7 @@ module CassandraObject
             if attributes.empty?
               memo[key] = nil
             else
-              memo[parse_key(key)] = instantiate(key, attributes)
+              memo[key] = instantiate(key, attributes)
             end
             memo
           end
@@ -164,7 +160,10 @@ module CassandraObject
             end
           end
 
-          instantiate_many(attribute_results)
+          # key attribute comes back as cassandraNaturalKey class.  Need to set key attribute to string class
+          im = instantiate_many(attribute_results)
+          im.each { |k,v| v.key = v.key.to_s}
+          im
         end
 
         def multi_get_by_expression(expression, options={})
