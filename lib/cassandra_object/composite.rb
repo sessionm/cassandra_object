@@ -36,11 +36,11 @@ module Cassandra
 
     def pack
       packed = @parts.map do |part|
-        [part.length].pack('n') + part + "\x00"
+        [part.to_s.length].pack('n') + part.to_s + "\x00"
       end
       if @column_slice
         part = @parts[-1]
-        packed[-1] = [part.length].pack('n') + part + slice_end_of_component
+        packed[-1] = [part.to_s.length].pack('n') + part.to_s + slice_end_of_component
       end
       return packed.join('')
     end
@@ -83,7 +83,8 @@ module Cassandra
       return "\x00"
     end
 
-    def fast_unpack(packed_string)
+    def fast_unpack(pack_string)
+      packed_string = pack_string.dup
       @hash = packed_string.hash
 
       @parts = []

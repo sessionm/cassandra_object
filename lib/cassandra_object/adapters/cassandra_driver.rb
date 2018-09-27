@@ -81,12 +81,6 @@ module CassandraObject
           session.close
         end
 
-        def each(column_family, options = {})
-          get_range(column_family, options) do |key, columns|
-            yield key, columns
-          end
-        end
-
         def execute(query, options={})
           ActiveSupport::Notifications.instrument('query.cassandra', query: query, options: options, async: false) do
             session.execute query, options
@@ -172,7 +166,10 @@ module CassandraObject
           data
         end
 
-        def get_columns(column_family, key, columns, opts=nil)
+        def get_columns(column_family, key, *columns_options)
+          opts = columns_options.pop if columns_options.last.is_a?(Hash)
+
+          columns = columns_options.flatten.compact
           async = opts.try(:[], :async)
 
           name_fields = columns.map { |c| escape(c, name_type(column_family)) }.join(', ')
@@ -190,7 +187,7 @@ module CassandraObject
 
 
 
-        def get_columns_as_hash(column_family, key, columns, opts=nil)
+        def get_columns_as_hash(column_family, key, columns, opts)
           async = opts.try(:[], :async)
           col_fields = get_column_fields(column_family)
           cols = columns.count == 1 ? columns.first : columns if columns.is_a? Array
@@ -282,11 +279,7 @@ module CassandraObject
           key_count = opts[:key_count] || 100
           query = "SELECT #{KEY_FIELD} FROM \"#{column_family}\" LIMIT #{key_count}"
           keys = self.execute(query, execute_options(opts)).map { |result| result[KEY_FIELD] }
-          results = keys.size > 0 ? multi_get(column_family, keys) : {}
-          return results unless block_given?
-          results.each do |key, columns|
-            yield key, columns
-          end
+          keys.size > 0 ? multi_get(column_family, keys) : {}
         end
 
         def multi_get(column_family, keys, *args)
@@ -307,13 +300,23 @@ module CassandraObject
           column_fields = get_column_fields(column_family)
           results = CassandraObject::OrderedHash.new
 
+          # ----- temporary DB dump for diagnostics
+          # puts "------ cf_data_migration=#{SystemConfig.cf_data_migration}"
+          # puts "------ key_vals=#{key_vals} cols=#{cols}"
+          # puts "------ keys    =#{keys}"
+          # query = "SELECT * FROM \"#{column_family}\""
+          # self.execute(query).each do |row|
+          #   puts "------ key=#{decode(row['key'], key_type(column_family))} col1=#{row['column1']} val=#{decode(row[VALUE_FIELD], value_type(column_family))}"
+          # end
+          # -----
+
           query = "SELECT writetime(#{VALUE_FIELD}), #{VALUE_FIELD}, key, #{column_fields.map(&:first).join(',')} FROM \"#{column_family}\" WHERE #{KEY_FIELD} IN(#{keys})"
           self.execute(query, execute_options(opts)).each do |row|
             if !column_fields.map(&:first).select{ |col| cols.include?(row[col])}.empty?
               if results[row['key']]
-                results[row['key']] << decode(row[VALUE_FIELD], value_type(column_family))
+                results[decode(row['key'], key_type(column_family))] << decode(row[VALUE_FIELD], value_type(column_family))
               else
-                results.[]= row['key'], [decode(row[VALUE_FIELD], value_type(column_family))]
+                results.[]= decode(row['key'], key_type(column_family)), [decode(row[VALUE_FIELD], value_type(column_family))]
               end
             end
           end
