@@ -168,7 +168,6 @@ module CassandraObject
 
         def get_columns(column_family, key, *columns_options)
           opts = columns_options.pop if columns_options.last.is_a?(Hash)
-
           columns = columns_options.flatten.compact
           async = opts.try(:[], :async)
 
