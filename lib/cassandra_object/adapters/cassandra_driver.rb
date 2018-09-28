@@ -81,6 +81,12 @@ module CassandraObject
           session.close
         end
 
+        def each(column_family, options = {})
+          get_range(column_family, options) do |key, columns|
+            yield key, columns
+          end
+        end
+
         def execute(query, options={})
           ActiveSupport::Notifications.instrument('query.cassandra', query: query, options: options, async: false) do
             session.execute query, options
@@ -278,7 +284,11 @@ module CassandraObject
           key_count = opts[:key_count] || 100
           query = "SELECT #{KEY_FIELD} FROM \"#{column_family}\" LIMIT #{key_count}"
           keys = self.execute(query, execute_options(opts)).map { |result| result[KEY_FIELD] }
-          keys.size > 0 ? multi_get(column_family, keys) : {}
+          results = keys.size > 0 ? multi_get(column_family, keys) : {}
+          return results unless block_given?
+          results.each do |key, columns|
+            yield key, columns
+          end
         end
 
         def multi_get(column_family, keys, *args)
