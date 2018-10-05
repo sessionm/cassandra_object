@@ -22,6 +22,7 @@ module CassandraObject
   autoload :Mocking
   autoload :Batches
   autoload :FinderMethods
+  autoload :OrderedHash
   autoload :Timestamps
   autoload :Type
   autoload :Schema

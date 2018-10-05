@@ -52,13 +52,25 @@ module CassandraObject
         CassandraObject::Relation.new(self, self.arel_table, options)
       end
 
+      def last(options=nil)
+        result = CassandraObject::Base.with_connection(nil, :read) do
+          ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: 100) do
+            connection.get_range(column_family, key_count: 100, consistency: thrift_read_consistency)
+          end
+        end
+
+        result = result.flatten.last(2) if result.count > 0
+        result ? instantiate(result[0], result[1]) : nil
+      end
+
       def first(options=nil)
         result = CassandraObject::Base.with_connection(nil, :read) do
           ActiveSupport::Notifications.instrument("get_range.cassandra_object", column_family: column_family, key_count: 1) do
             connection.get_range(column_family, key_count: 1, consistency: thrift_read_consistency)
           end
-        end.first
+        end
 
+        result = result.flatten.first(2) if result.count > 0
         result ? instantiate(result[0], result[1]) : nil
       end
 
@@ -103,7 +115,6 @@ module CassandraObject
         #raise RecordNotFound, "Couldn't find #{record_klass.name} without an ID" if ids.empty?
 
         results = multi_get(ids).values.compact
-
         results.size <= 1 && !expects_array ? results.first : results
       end
 
@@ -136,7 +147,7 @@ module CassandraObject
             if attributes.empty?
               memo[key] = nil
             else
-              memo[parse_key(key)] = instantiate(key, attributes)
+              memo[key] = instantiate(key, attributes)
             end
             memo
           end
@@ -149,7 +160,10 @@ module CassandraObject
             end
           end
 
-          instantiate_many(attribute_results)
+          # key attribute comes back as cassandraNaturalKey class.  Need to set key attribute to string class
+          im = instantiate_many(attribute_results)
+          im.each { |k,v| v.key = v.key.to_s}
+          im
         end
 
         def multi_get_by_expression(expression, options={})
