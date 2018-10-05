@@ -6,8 +6,8 @@ Gem::Specification.new do |s|
   s.description = 'Cassandra ActiveModel'
   s.summary = 'Cassandra ActiveModel'
 
-  s.authors = ["Doug Youch", "sessionm"]
-  s.email = 'doug@sessionm.com'
+  s.authors = ["Matthew Keith", "sessionm"]
+  s.email = 'mkeith@sessionm.com'
   s.homepage = 'http://github.com/sessionm/cassandra_object'
 
   s.extra_rdoc_files = ["README.markdown"]
