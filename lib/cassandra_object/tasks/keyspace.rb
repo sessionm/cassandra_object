@@ -1,3 +1,5 @@
+require_relative 'column_family'
+
 module CassandraObject
 
   module Tasks
