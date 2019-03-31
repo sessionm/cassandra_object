@@ -1,3 +1,5 @@
+require_relative 'column_family'
+
 namespace :ks do
   task :configure => :environment do
     @configs = YAML.load_file(Rails.root.join("config", "cassandra.yml"))
